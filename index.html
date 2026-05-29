@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kontfeel Stock</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="K-Stock" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-logo" href="index.html">📦 K-Stock</a>
+    <div class="nav-links">
+      <a class="nav-link active" href="index.html">Articles</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="labels.html">Étiquettes</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" class="search-input" id="search" placeholder="Rechercher un article ou une référence…" />
+    </div>
+
+    <div id="content">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+
+    const ZONES = {
+      PALETTE: 'Stockage palette',
+      CHUTE: 'Chute de matière',
+      CONSO: 'Consommables / accessoires',
+      RACK: 'Matière dans les racks',
+      RELIQUAT: 'Reliquat de commande',
+      'BOX-LOG': 'Box container logistique',
+      SHOWROOM: 'Showroom',
+      BE: 'Zone BE',
+      MATERIAU: 'Matériautheque',
+      FACONNE: 'Stock façonnage',
+      LOGISTIQUE: 'Zone logistique',
+    };
+
+    let allArticles = [];
+
+    function showFlash(msg, type = 'success') {
+      const el = document.getElementById('flash');
+      el.textContent = msg;
+      el.className = `flash flash-${type} show`;
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function render(articles) {
+      const content = document.getElementById('content');
+      if (!articles.length) {
+        content.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Aucun article trouvé</div></div>';
+        return;
+      }
+
+      // Group by zone
+      const grouped = {};
+      articles.forEach(a => {
+        const z = a.zone || 'AUTRE';
+        if (!grouped[z]) grouped[z] = [];
+        grouped[z].push(a);
+      });
+
+      let html = '';
+      Object.entries(grouped).forEach(([zone, items]) => {
+        html += `<div class="zone-header">${ZONES[zone] || zone}</div>`;
+        items.forEach(a => {
+          const stock = parseInt(a.stock_actuel) || 0;
+          const mini = parseInt(a.stock_mini) || 0;
+          const cls = stock === 0 ? 'empty' : (mini > 0 && stock <= mini ? 'low' : '');
+          html += `
+            <a class="article-item" href="scan.html?ref=${encodeURIComponent(a.ref)}">
+              <div>
+                <div class="article-name">${a.nom}</div>
+                <div class="article-meta">${a.ref} · ${a.unite || 'unité'}</div>
+              </div>
+              <span class="stock-badge ${cls}">${stock} ${a.unite || ''}</span>
+            </a>`;
+        });
+      });
+
+      content.innerHTML = html;
+    }
+
+    async function load() {
+      try {
+        if (CONFIG.API_URL === 'REMPLACE_PAR_TON_URL_APPS_SCRIPT') {
+          document.getElementById('content').innerHTML = `
+            <div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+              <p style="font-size:14px;color:#92400e;font-weight:600;">⚠️ Configuration requise</p>
+              <p style="font-size:13px;color:#78350f;margin-top:6px;">Ouvre <code>config.js</code> et remplace <code>REMPLACE_PAR_TON_URL_APPS_SCRIPT</code> par l'URL de ton Google Apps Script.</p>
+            </div>`;
+          return;
+        }
+        allArticles = await API.listArticles();
+        render(allArticles);
+      } catch (e) {
+        document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Impossible de charger les articles. Vérifie ta connexion.</div></div>';
+      }
+    }
+
+    document.getElementById('search').addEventListener('input', e => {
+      const q = e.target.value.toLowerCase().trim();
+      if (!q) { render(allArticles); return; }
+      render(allArticles.filter(a =>
+        a.nom.toLowerCase().includes(q) ||
+        a.ref.toLowerCase().includes(q) ||
+        (a.zone || '').toLowerCase().includes(q)
+      ));
+    });
+
+    load();
+  </script>
+</body>
+</html>

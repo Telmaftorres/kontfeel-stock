@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — K-Stock</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-logo" href="index.html">📦 K-Stock</a>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Articles</a>
+      <a class="nav-link active" href="admin.html">Admin</a>
+      <a class="nav-link" href="labels.html">Étiquettes</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('articles')">Articles</div>
+      <div class="tab" onclick="switchTab('add')">+ Ajouter</div>
+      <div class="tab" onclick="switchTab('history')">Historique</div>
+    </div>
+
+    <!-- Articles tab -->
+    <div id="tab-articles">
+      <div id="articles-list"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Add tab -->
+    <div id="tab-add" style="display:none">
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Nouvel article</h3>
+        <div class="form-group">
+          <label class="form-label">Référence unique *</label>
+          <input type="text" class="form-input" id="add-ref" placeholder="ex: RACK-PCM3000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input type="text" class="form-input" id="add-nom" placeholder="ex: PCM 3000m" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zone *</label>
+          <select class="form-select" id="add-zone">
+            <option value="">-- Choisir --</option>
+            <option value="PALETTE">Stockage palette</option>
+            <option value="CHUTE">Chute de matière</option>
+            <option value="CONSO">Consommables / accessoires</option>
+            <option value="RACK">Matière dans les racks</option>
+            <option value="RELIQUAT">Reliquat de commande</option>
+            <option value="BOX-LOG">Box container logistique</option>
+            <option value="SHOWROOM">Showroom</option>
+            <option value="BE">Zone BE</option>
+            <option value="MATERIAU">Matériautheque</option>
+            <option value="FACONNE">Stock façonnage</option>
+            <option value="LOGISTIQUE">Zone logistique</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unité</label>
+          <input type="text" class="form-input" id="add-unite" placeholder="ex: rouleau, boîte, palette…" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Stock initial</label>
+            <input type="number" class="form-input" id="add-stock" value="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Seuil d'alerte</label>
+            <input type="number" class="form-input" id="add-mini" value="0" min="0" />
+          </div>
+        </div>
+        <button class="btn btn-primary" id="add-btn" onclick="addArticle()" style="width:100%;margin-top:4px;">
+          Créer l'article
+        </button>
+      </div>
+    </div>
+
+    <!-- History tab -->
+    <div id="tab-history" style="display:none">
+      <div id="history-list"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    let currentTab = 'articles';
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['articles', 'add', 'history'][i] === tab);
+      });
+      ['articles', 'add', 'history'].forEach(t => {
+        document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+      });
+      currentTab = tab;
+      if (tab === 'articles') loadArticles();
+      if (tab === 'history') loadHistory();
+    }
+
+    function showFlash(msg, type = 'success') {
+      const el = document.getElementById('flash');
+      el.textContent = msg;
+      el.className = `flash flash-${type} show`;
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    const ZONES = {
+      PALETTE: 'Palette', CHUTE: 'Chute', CONSO: 'Conso',
+      RACK: 'Rack', RELIQUAT: 'Reliquat', 'BOX-LOG': 'Box Log',
+      SHOWROOM: 'Showroom', BE: 'BE', MATERIAU: 'Matériautheque',
+      FACONNE: 'Façonnage', LOGISTIQUE: 'Logistique',
+    };
+
+    async function loadArticles() {
+      const el = document.getElementById('articles-list');
+      el.innerHTML = '<div class="spinner"></div>';
+      try {
+        const articles = await API.listArticles();
+        if (!articles.length) {
+          el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Aucun article. Ajoutes-en via l\'onglet "+"</div></div>';
+          return;
+        }
+        let html = '<div class="table-wrap"><table><thead><tr><th>Référence</th><th>Article</th><th>Zone</th><th>Stock</th><th>Unité</th><th></th></tr></thead><tbody>';
+        articles.forEach(a => {
+          const stock = parseInt(a.stock_actuel) || 0;
+          const mini = parseInt(a.stock_mini) || 0;
+          const cls = stock === 0 ? 'empty' : (mini > 0 && stock <= mini ? 'low' : '');
+          html += `<tr>
+            <td><code style="font-size:12px">${a.ref}</code></td>
+            <td><strong>${a.nom}</strong></td>
+            <td><span style="font-size:12px;color:var(--slate-500)">${ZONES[a.zone] || a.zone || '—'}</span></td>
+            <td><span class="stock-badge ${cls}">${stock}</span></td>
+            <td style="font-size:12px;color:var(--slate-500)">${a.unite || '—'}</td>
+            <td>
+              <button class="btn btn-sm btn-outline" onclick="editStock('${a.ref}','${a.nom}',${stock})">Modifier stock</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table></div>';
+        el.innerHTML = html;
+      } catch {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+      }
+    }
+
+    async function loadHistory() {
+      const el = document.getElementById('history-list');
+      el.innerHTML = '<div class="spinner"></div>';
+      try {
+        const history = await API.getHistory();
+        if (!history.length) {
+          el.innerHTML = '<div class="empty"><div class="empty-icon">🕓</div><div class="empty-text">Aucun mouvement enregistré</div></div>';
+          return;
+        }
+        let html = '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Article</th><th>Type</th><th>Qté</th><th>Stock après</th><th>Employé</th></tr></thead><tbody>';
+        history.slice(0, 100).forEach(h => {
+          const date = h.timestamp ? new Date(h.timestamp).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+          html += `<tr>
+            <td style="font-size:12px;white-space:nowrap">${date}</td>
+            <td><strong style="font-size:13px">${h.nom}</strong><br><code style="font-size:11px;color:var(--slate-400)">${h.ref}</code></td>
+            <td><span class="badge badge-${h.type}">${h.type === 'entree' ? 'Entrée' : 'Sortie'}</span></td>
+            <td style="font-weight:700">${h.type === 'entree' ? '+' : '−'}${h.quantite}</td>
+            <td>${h.stock_apres}</td>
+            <td style="font-size:13px">${h.employe || '—'}</td>
+          </tr>`;
+        });
+        html += '</tbody></table></div>';
+        el.innerHTML = html;
+      } catch {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+      }
+    }
+
+    async function addArticle() {
+      const ref = document.getElementById('add-ref').value.trim().toUpperCase();
+      const nom = document.getElementById('add-nom').value.trim();
+      const zone = document.getElementById('add-zone').value;
+      const unite = document.getElementById('add-unite').value.trim();
+      const stock = parseInt(document.getElementById('add-stock').value) || 0;
+      const mini = parseInt(document.getElementById('add-mini').value) || 0;
+
+      if (!ref || !nom || !zone) { showFlash('Remplis au minimum : référence, nom et zone.', 'error'); return; }
+
+      const btn = document.getElementById('add-btn');
+      btn.disabled = true; btn.textContent = 'Création…';
+      try {
+        const res = await API.addArticle({ ref, nom, zone, unite, stock_actuel: stock, stock_mini: mini });
+        if (res.error) throw new Error(res.error);
+        showFlash(`Article "${nom}" créé !`);
+        ['add-ref','add-nom','add-unite'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('add-stock').value = '0';
+        document.getElementById('add-mini').value = '0';
+        document.getElementById('add-zone').value = '';
+      } catch (e) {
+        showFlash('Erreur lors de la création.', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Créer l\'article';
+      }
+    }
+
+    function editStock(ref, nom, currentStock) {
+      const newStock = prompt(`Nouveau stock pour "${nom}" (actuel : ${currentStock}) :`, currentStock);
+      if (newStock === null) return;
+      const val = parseInt(newStock);
+      if (isNaN(val) || val < 0) { showFlash('Valeur invalide.', 'error'); return; }
+      API.updateArticle({ ref, stock_actuel: val })
+        .then(res => {
+          if (res.error) throw new Error();
+          showFlash('Stock mis à jour !');
+          loadArticles();
+        })
+        .catch(() => showFlash('Erreur.', 'error'));
+    }
+
+    loadArticles();
+  </script>
+</body>
+</html>

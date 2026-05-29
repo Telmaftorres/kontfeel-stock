@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- Ouvre cette page dans Chrome, clique les boutons pour télécharger les icônes -->
+<html><head><meta charset="UTF-8"><title>Générer icônes</title></head>
+<body style="font-family:sans-serif;padding:24px">
+<h2>Génération des icônes PWA</h2>
+<p>Clique sur chaque bouton pour télécharger l'icône, puis place les fichiers dans le dossier <code>kontfeel-stock/</code>.</p>
+<br>
+<button onclick="generate(192)">Télécharger icon-192.png</button>
+<button onclick="generate(512)" style="margin-left:12px">Télécharger icon-512.png</button>
+<canvas id="c" style="display:none"></canvas>
+<script>
+function generate(size) {
+  const c = document.getElementById('c');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  // Background
+  ctx.fillStyle = '#4f46e5';
+  roundRect(ctx, 0, 0, size, size, size * 0.2);
+  ctx.fill();
+  // Text KS
+  ctx.fillStyle = 'white';
+  ctx.font = `bold ${size * 0.38}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('KS', size / 2, size / 2);
+  // Download
+  const a = document.createElement('a');
+  a.download = `icon-${size}.png`;
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+</script>
+</body></html>

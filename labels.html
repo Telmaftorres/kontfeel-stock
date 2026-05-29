@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Étiquettes — K-Stock</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    @media print {
+      @page { size: A4; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav no-print">
+    <a class="nav-logo" href="index.html">📦 K-Stock</a>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Articles</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link active" href="labels.html">Étiquettes</a>
+    </div>
+  </nav>
+
+  <div class="no-print container" style="padding-bottom:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <div>
+        <h2 style="font-size:16px;font-weight:700;">Étiquettes à imprimer</h2>
+        <p style="font-size:13px;color:var(--slate-400);margin-top:2px;">Chaque étiquette contient un QR code qui ouvre directement la page de scan.</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <p style="font-size:13px;color:var(--slate-500);">
+        ⚠️ L'URL de l'app doit être configurée dans <code>config.js</code> pour que les QR codes soient corrects.
+      </p>
+    </div>
+  </div>
+
+  <div class="label-grid" id="label-grid">
+    <div class="spinner no-print"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    const ZONES = {
+      PALETTE: 'Stockage palette', CHUTE: 'Chute de matière',
+      CONSO: 'Consommables', RACK: 'Matière racks',
+      RELIQUAT: 'Reliquat', 'BOX-LOG': 'Box logistique',
+      SHOWROOM: 'Showroom', BE: 'Zone BE',
+      MATERIAU: 'Matériautheque', FACONNE: 'Façonnage',
+      LOGISTIQUE: 'Logistique',
+    };
+
+    function qrUrl(ref) {
+      const appUrl = location.origin + location.pathname.replace('labels.html', '') + 'scan.html?ref=' + encodeURIComponent(ref);
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(appUrl)}`;
+    }
+
+    async function load() {
+      const grid = document.getElementById('label-grid');
+      try {
+        const articles = await API.listArticles();
+        if (!articles.length) {
+          grid.innerHTML = '<div class="empty no-print"><div class="empty-icon">📭</div><div class="empty-text">Aucun article. Crée des articles dans l\'Admin d\'abord.</div></div>';
+          return;
+        }
+        grid.innerHTML = articles.map(a => `
+          <div class="label-card">
+            <img class="label-qr" src="${qrUrl(a.ref)}" alt="QR ${a.ref}" loading="lazy" />
+            <div class="label-zone">${ZONES[a.zone] || a.zone || ''}</div>
+            <div class="label-name">${a.nom}</div>
+            <div class="label-ref">${a.ref}</div>
+          </div>`).join('');
+      } catch {
+        grid.innerHTML = '<div class="empty no-print"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

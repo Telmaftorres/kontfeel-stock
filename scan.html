@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan — K-Stock</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: white; }
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--slate-500); text-decoration: none; padding: 14px 16px; }
+    .back-link:hover { color: var(--primary); }
+    .divider { height: 1px; background: var(--slate-100); margin: 0 16px; }
+  </style>
+</head>
+<body>
+  <a class="back-link" href="index.html">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Retour
+  </a>
+
+  <div id="app">
+    <div class="spinner"></div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    let article = null;
+    let qty = 1;
+
+    const ZONES = {
+      PALETTE: 'Stockage palette', CHUTE: 'Chute de matière',
+      CONSO: 'Consommables', RACK: 'Matière racks',
+      RELIQUAT: 'Reliquat', 'BOX-LOG': 'Box logistique',
+      SHOWROOM: 'Showroom', BE: 'Zone BE',
+      MATERIAU: 'Matériautheque', FACONNE: 'Façonnage',
+      LOGISTIQUE: 'Logistique',
+    };
+
+    function showFlash(msg, type = 'success') {
+      const el = document.getElementById('flash');
+      el.textContent = msg;
+      el.className = `flash flash-${type} show`;
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function getEmployee() {
+      return document.getElementById('employee-input')?.value?.trim()
+        || localStorage.getItem('kstock_employee')
+        || 'Anonyme';
+    }
+
+    function renderArticle(a) {
+      const stock = parseInt(a.stock_actuel) || 0;
+      const zone = ZONES[a.zone] || a.zone || '';
+      document.getElementById('app').innerHTML = `
+        <div class="scan-hero">
+          ${zone ? `<div class="scan-zone-badge">${zone}</div>` : ''}
+          <div class="scan-article-name">${a.nom}</div>
+          <div class="scan-ref">${a.ref}</div>
+          <div class="scan-stock-wrap">
+            <div class="scan-stock" id="stock-display">${stock}</div>
+            <div class="scan-stock-label">${a.unite || 'unité(s)'} en stock</div>
+          </div>
+        </div>
+
+        <div class="qty-selector">
+          <button class="qty-btn" id="qty-minus" onclick="changeQty(-1)">−</button>
+          <div class="qty-value" id="qty-display">1</div>
+          <button class="qty-btn" id="qty-plus" onclick="changeQty(1)">+</button>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn-action btn-sortie" onclick="doAction('sortie')">
+            <span class="btn-action-icon">↓</span>
+            SORTIE
+            <span class="btn-action-sub">retirer du stock</span>
+          </button>
+          <button class="btn-action btn-entree" onclick="doAction('entree')">
+            <span class="btn-action-icon">↑</span>
+            ENTRÉE
+            <span class="btn-action-sub">ajouter au stock</span>
+          </button>
+        </div>
+
+        <div class="divider" style="margin-top:24px;"></div>
+        <div class="employee-bar">
+          <label for="employee-input">Qui ?</label>
+          <input type="text" class="employee-input" id="employee-input"
+            placeholder="Ton prénom…"
+            value="${localStorage.getItem('kstock_employee') || ''}" />
+        </div>`;
+
+      document.getElementById('employee-input').addEventListener('change', e => {
+        localStorage.setItem('kstock_employee', e.target.value.trim());
+      });
+    }
+
+    function changeQty(delta) {
+      qty = Math.max(1, qty + delta);
+      document.getElementById('qty-display').textContent = qty;
+    }
+
+    async function doAction(type) {
+      const btns = document.querySelectorAll('.btn-action');
+      btns.forEach(b => { b.disabled = true; b.style.opacity = '0.6'; });
+
+      try {
+        const employe = getEmployee();
+        const result = await API.movement(ref, type, qty, employe);
+        if (result.error) throw new Error(result.error);
+
+        const newStock = result.stock_actuel;
+        document.getElementById('stock-display').textContent = newStock;
+        const label = type === 'sortie' ? `−${qty} enregistré ✓` : `+${qty} enregistré ✓`;
+        showFlash(label, 'success');
+        qty = 1;
+        document.getElementById('qty-display').textContent = '1';
+      } catch (e) {
+        showFlash('Erreur — réessaie', 'error');
+      } finally {
+        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+      }
+    }
+
+    async function load() {
+      if (!ref) {
+        document.getElementById('app').innerHTML = `
+          <div class="not-found">
+            <h2>Aucune référence</h2>
+            <p>Scanne un QR code ou sélectionne un article.</p>
+            <a href="index.html" class="btn btn-primary">Voir les articles</a>
+          </div>`;
+        return;
+      }
+      try {
+        article = await API.getArticle(ref);
+        if (article.error) throw new Error();
+        renderArticle(article);
+      } catch {
+        document.getElementById('app').innerHTML = `
+          <div class="not-found">
+            <h2>Article introuvable</h2>
+            <p>La référence <strong>${ref}</strong> n'existe pas.</p>
+            <a href="index.html" class="btn btn-primary">Retour</a>
+          </div>`;
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
