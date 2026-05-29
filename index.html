@@ -120,6 +120,54 @@
       font-size: 16px;
     }
 
+    /* ── Bouton + flottant ── */
+    .fab {
+      position: fixed;
+      bottom: 32px; right: 24px;
+      width: 60px; height: 60px;
+      background: #4f46e5;
+      border: none; border-radius: 50%;
+      color: white; font-size: 32px; font-weight: 300;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.5);
+      cursor: pointer; z-index: 30;
+      transition: transform 0.15s;
+    }
+    .fab:active { transform: scale(0.92); }
+
+    /* ── Modal ajout article ── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 40; display: none;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: white; color: #0f172a;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px 40px;
+      width: 100%; max-width: 640px;
+    }
+    .modal-handle { width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 16px; }
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .modal .form-group { margin-bottom: 12px; }
+    .modal .form-label { font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 4px; display: block; }
+    .modal .form-input, .modal .form-select {
+      width: 100%; height: 44px;
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 0 12px; font-size: 15px; background: #f8fafc; outline: none;
+    }
+    .modal .form-input:focus, .modal .form-select:focus { border-color: #4f46e5; background: white; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .modal-btn {
+      flex: 1; height: 50px; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+    }
+    .modal-btn-cancel { background: #f1f5f9; color: #475569; }
+    .modal-btn-save { background: #4f46e5; color: white; }
+
     /* ── Bottom panel ── */
     #panel {
       position: absolute;
@@ -271,7 +319,6 @@
     <span class="top-logo">📦 K-Stock</span>
     <div class="top-actions">
       <a class="icon-btn" href="articles.html" title="Articles">☰</a>
-      <a class="icon-btn" href="admin.html" title="Admin">⚙️</a>
       <a class="icon-btn" href="labels.html" title="Étiquettes">🏷</a>
     </div>
   </div>
@@ -324,6 +371,58 @@
 </div>
 
 <div class="flash" id="flash"></div>
+
+<!-- Bouton + -->
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- Modal ajout article -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouvel article</div>
+
+    <div class="form-group">
+      <label class="form-label">Référence *</label>
+      <input type="text" class="form-input" id="m-ref" placeholder="ex: RACK-PCM3000" autocapitalize="characters" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nom *</label>
+      <input type="text" class="form-input" id="m-nom" placeholder="ex: PCM 3000m" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zone *</label>
+      <select class="form-select" id="m-zone">
+        <option value="">-- Choisir --</option>
+        <option value="PALETTE">Stockage palette</option>
+        <option value="CHUTE">Chute de matière</option>
+        <option value="CONSO">Consommables / accessoires</option>
+        <option value="RACK">Matière dans les racks</option>
+        <option value="RELIQUAT">Reliquat de commande</option>
+        <option value="BOX-LOG">Box container logistique</option>
+        <option value="SHOWROOM">Showroom</option>
+        <option value="BE">Zone BE</option>
+        <option value="MATERIAU">Matériautheque</option>
+        <option value="FACONNE">Stock façonnage</option>
+        <option value="LOGISTIQUE">Zone logistique</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <div class="form-group">
+        <label class="form-label">Unité</label>
+        <input type="text" class="form-input" id="m-unite" placeholder="rouleau, boîte…" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stock initial</label>
+        <input type="number" class="form-input" id="m-stock" value="0" min="0" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="modal-btn modal-btn-save" id="modal-save-btn" onclick="saveArticle()">Créer</button>
+    </div>
+  </div>
+</div>
 
 <script src="config.js"></script>
 <script src="api.js"></script>
@@ -469,6 +568,48 @@
   panel.addEventListener('touchend', e => {
     if (e.changedTouches[0].clientY - touchStartY > 60) closePanel();
   });
+
+  // ── Modal ajout article ──
+  function openModal() {
+    document.getElementById('modal-backdrop').classList.add('open');
+    scanning = false;
+  }
+
+  function closeModal() {
+    document.getElementById('modal-backdrop').classList.remove('open');
+    ['m-ref','m-nom','m-unite'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-stock').value = '0';
+    document.getElementById('m-zone').value = '';
+    if (!panel.classList.contains('open')) scanning = true;
+  }
+
+  function closeModalOutside(e) {
+    if (e.target === document.getElementById('modal-backdrop')) closeModal();
+  }
+
+  async function saveArticle() {
+    const ref   = document.getElementById('m-ref').value.trim().toUpperCase();
+    const nom   = document.getElementById('m-nom').value.trim();
+    const zone  = document.getElementById('m-zone').value;
+    const unite = document.getElementById('m-unite').value.trim();
+    const stock = parseInt(document.getElementById('m-stock').value) || 0;
+
+    if (!ref || !nom || !zone) { showFlash('Référence, nom et zone requis', 'error'); return; }
+
+    const btn = document.getElementById('modal-save-btn');
+    btn.disabled = true; btn.textContent = '…';
+
+    try {
+      const res = await API.addArticle({ ref, nom, zone, unite, stock_actuel: stock, stock_mini: 0 });
+      if (res.error) throw new Error(res.error);
+      showFlash(`"${nom}" créé ✓`, 'success');
+      closeModal();
+    } catch (e) {
+      showFlash(e.message || 'Erreur', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Créer';
+    }
+  }
 
   // Auto-start si permission déjà accordée
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
