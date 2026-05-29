@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Articles — K-Stock</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-logo" href="index.html">← Scanner</a>
+    <div class="nav-links">
+      <a class="nav-link active" href="articles.html">Articles</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="labels.html">Étiquettes</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" class="search-input" id="search" placeholder="Rechercher un article…" />
+    </div>
+    <div id="content"><div class="spinner"></div></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script>
+    const ZONES = {
+      PALETTE:'Stockage palette', CHUTE:'Chute de matière', CONSO:'Consommables',
+      RACK:'Matière racks', RELIQUAT:'Reliquat', 'BOX-LOG':'Box logistique',
+      SHOWROOM:'Showroom', BE:'Zone BE', MATERIAU:'Matériautheque',
+      FACONNE:'Façonnage', LOGISTIQUE:'Logistique',
+    };
+    let allArticles = [];
+
+    function render(articles) {
+      const content = document.getElementById('content');
+      if (!articles.length) {
+        content.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Aucun article</div></div>';
+        return;
+      }
+      const grouped = {};
+      articles.forEach(a => { const z = a.zone||'AUTRE'; if (!grouped[z]) grouped[z]=[]; grouped[z].push(a); });
+      let html = '';
+      Object.entries(grouped).forEach(([zone, items]) => {
+        html += `<div class="zone-header">${ZONES[zone]||zone}</div>`;
+        items.forEach(a => {
+          const stock = parseInt(a.stock_actuel)||0;
+          const mini  = parseInt(a.stock_mini)||0;
+          const cls   = stock===0 ? 'empty' : (mini>0&&stock<=mini ? 'low' : '');
+          html += `<a class="article-item" href="scan.html?ref=${encodeURIComponent(a.ref)}">
+            <div>
+              <div class="article-name">${a.nom}</div>
+              <div class="article-meta">${a.ref} · ${a.unite||'unité'}</div>
+            </div>
+            <span class="stock-badge ${cls}">${stock} ${a.unite||''}</span>
+          </a>`;
+        });
+      });
+      content.innerHTML = html;
+    }
+
+    async function load() {
+      try { allArticles = await API.listArticles(); render(allArticles); }
+      catch { document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>'; }
+    }
+
+    document.getElementById('search').addEventListener('input', e => {
+      const q = e.target.value.toLowerCase().trim();
+      render(q ? allArticles.filter(a => a.nom.toLowerCase().includes(q)||a.ref.toLowerCase().includes(q)) : allArticles);
+    });
+
+    load();
+  </script>
+</body>
+</html>
