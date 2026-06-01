@@ -47,22 +47,27 @@ function ok(data) {
 // ── Articles ─────────────────────────────────────────────
 
 function getArticles() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('articles');
+  if (cached) return JSON.parse(cached);
+
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ART);
   const rows  = sheet.getDataRange().getValues();
   if (rows.length <= 1) return [];
   const h = rows[0];
-  return rows.slice(1)
-    .filter(r => r[0])
-    .map(r => rowToObj(h, r));
+  const articles = rows.slice(1).filter(r => r[0]).map(r => rowToObj(h, r));
+  cache.put('articles', JSON.stringify(articles), 1800); // 30 min
+  return articles;
 }
 
 function getArticle(ref) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ART);
-  const rows  = sheet.getDataRange().getValues();
-  const h = rows[0];
-  const i = rows.findIndex((r, idx) => idx > 0 && r[0] === ref);
-  if (i === -1) return { error: 'Article introuvable' };
-  return rowToObj(h, rows[i]);
+  const articles = getArticles();
+  const art = articles.find(a => a.ref === ref);
+  return art || { error: 'Article introuvable' };
+}
+
+function invalidateCache() {
+  CacheService.getScriptCache().remove('articles');
 }
 
 function addArticle(d) {
@@ -81,6 +86,7 @@ function addArticle(d) {
     parseInt(d.stock_mini)    || 0,
     d.conditionnement         || 'aucun',
   ]);
+  invalidateCache();
   return { success: true };
 }
 
@@ -99,6 +105,7 @@ function updateArticle(d) {
       );
     }
   });
+  invalidateCache();
   return { success: true };
 }
 
@@ -108,6 +115,7 @@ function deleteArticle(ref) {
   const i     = rows.findIndex((r, idx) => idx > 0 && r[0] === ref);
   if (i === -1) return { error: 'Article introuvable' };
   sheet.deleteRow(i + 1);
+  invalidateCache();
   return { success: true };
 }
 
@@ -147,6 +155,7 @@ function recordMovement(d) {
     d.employe || 'Anonyme',
   ]);
 
+  invalidateCache();
   return { success: true, stock_actuel: stockAfter };
 }
 
