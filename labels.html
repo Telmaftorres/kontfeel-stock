@@ -29,11 +29,6 @@
       </div>
       <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimer</button>
     </div>
-    <div style="margin-bottom:16px;">
-      <p style="font-size:13px;color:var(--slate-500);">
-        ⚠️ L'URL de l'app doit être configurée dans <code>config.js</code> pour que les QR codes soient corrects.
-      </p>
-    </div>
   </div>
 
   <div class="label-grid" id="label-grid">
@@ -53,7 +48,8 @@
     };
 
     function qrUrl(ref) {
-      const appUrl = location.origin + location.pathname.replace('labels.html', '') + 'scan.html?ref=' + encodeURIComponent(ref);
+      const base = 'https://kontfeel-stock.vercel.app';
+      const appUrl = base + '/scan.html?ref=' + encodeURIComponent(ref);
       return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(appUrl)}`;
     }
 
