@@ -376,18 +376,19 @@
   async function uploadPhoto(input) {
     if (!input.files[0] || !currentItem) return;
     showFlash('Upload en cours…', 'success');
-    const base64 = await fileToBase64(input.files[0]);
-    const resized = await resizeImage(base64, 600);
     try {
-      const res = await API.addGollectPhoto(currentItem.ref, resized);
-      if (res.error) throw new Error();
+      const base64 = await fileToBase64(input.files[0]);
+      const resized = await resizeImage(base64, 800);
+      const url = await API.uploadPhoto(resized);
+      const res = await API.saveGollectPhotoUrl(currentItem.ref, url);
+      if (res.error) throw new Error(res.error);
       const img = document.createElement('img');
       img.className = 'photo-thumb';
-      img.src = res.url;
-      img.onclick = () => openLightbox(res.url);
+      img.src = url;
+      img.onclick = () => openLightbox(url);
       document.getElementById('p-photos').insertBefore(img, document.querySelector('.photo-add'));
       showFlash('Photo ajoutée ✓', 'success');
-    } catch { showFlash('Erreur upload', 'error'); }
+    } catch (e) { showFlash(e.message || 'Erreur upload', 'error'); }
   }
 
   function openLightbox(url) {
@@ -447,10 +448,16 @@
       showFlash(`"${nom}" créé ✓`, 'success');
       closeModal();
 
-      // Upload photo en arrière-plan (non-bloquant)
+      // Upload photo via ImgBB
       if (modalPhotoBase64) {
-        const resized = await resizeImage(modalPhotoBase64, 400);
-        API.addGollectPhoto(ref, resized).catch(() => {});
+        resizeImage(modalPhotoBase64, 800).then(resized =>
+          API.uploadPhoto(resized)
+        ).then(url =>
+          API.saveGollectPhotoUrl(ref, url)
+        ).then(res => {
+          if (res.success) showFlash('Photo ajoutée ✓', 'success');
+          else showFlash('Article créé, photo non envoyée ⚠️', 'error');
+        }).catch(() => showFlash('Article créé, photo non envoyée ⚠️', 'error'));
       }
     } catch (e) {
       showFlash(e.message || 'Erreur', 'error');
@@ -478,7 +485,7 @@
         const c = document.createElement('canvas');
         c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.4));
+        resolve(c.toDataURL('image/jpeg', 0.7));
       };
       img.src = base64;
     });

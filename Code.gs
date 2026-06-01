@@ -40,7 +40,8 @@ function doPost(e) {
   if (data.action === 'add_gollect')       return ok(addGollectItem(data));
   if (data.action === 'gollect_movement')  return ok(gollectMovement(data));
   if (data.action === 'gollect_etat')      return ok(updateGollectEtat(data));
-  if (data.action === 'add_gollect_photo') return ok(addGollectPhoto(data));
+  if (data.action === 'add_gollect_photo')      return ok(addGollectPhoto(data));
+  if (data.action === 'save_gollect_photo_url') return ok(saveGollectPhotoUrl(data));
   return ok({ error: 'Unknown action' });
 }
 
@@ -281,6 +282,20 @@ function addGollectPhoto(d) {
   sheet.getRange(i+1, photosCol+1).setValue(existing + url);
   CacheService.getScriptCache().remove('gollect');
   return { success: true, url };
+}
+
+function saveGollectPhotoUrl(d) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(GOL);
+  if (!sheet) return { error: 'Onglet Gollect introuvable' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const i = rows.findIndex((r, idx) => idx > 0 && r[0] === d.ref);
+  if (i === -1) return { error: 'Article introuvable' };
+  const photosCol = h.indexOf('photos');
+  const existing = rows[i][photosCol] ? rows[i][photosCol] + ',' : '';
+  sheet.getRange(i+1, photosCol+1).setValue(existing + d.url);
+  CacheService.getScriptCache().remove('gollect');
+  return { success: true, url: d.url };
 }
 
 function getOrCreateGollectFolder() {

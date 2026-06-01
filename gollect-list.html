@@ -704,29 +704,27 @@ function addPhotoFromPanel() {
   document.getElementById('panelPhotoInput').click();
 }
 
-function uploadPanelPhoto(input) {
+async function uploadPanelPhoto(input) {
   if (!input.files[0] || !currentItem) return;
   const ref = currentItem.ref;
   flash('Upload en cours…');
-  resizeFile(input.files[0], 400, 0.4, base64 => {
-    API.addGollectPhoto(ref, base64)
-      .then(res => {
-        if (res.success) {
-          flash('Photo ajoutée ✓');
-          const idx = items.findIndex(i => i.ref === ref);
-          if (idx >= 0) {
-            const existing = items[idx].photos ? items[idx].photos + ',' : '';
-            items[idx].photos = existing + res.url;
-            currentItem.photos = items[idx].photos;
-            panelPhotos = items[idx].photos.split(',').filter(Boolean);
-            panelPhotoIdx = panelPhotos.length - 1;
-            renderPanelPhoto();
-            render();
-          }
-        } else { flash(res.error || 'Erreur photo', 'error'); }
-      })
-      .catch(() => flash('Échec upload photo', 'error'));
-  });
+  try {
+    const url = await uploadPhoto(input.files[0]);
+    const res = await API.saveGollectPhotoUrl(ref, url);
+    if (res.success) {
+      flash('Photo ajoutée ✓');
+      const idx = items.findIndex(i => i.ref === ref);
+      if (idx >= 0) {
+        const existing = items[idx].photos ? items[idx].photos + ',' : '';
+        items[idx].photos = existing + url;
+        currentItem.photos = items[idx].photos;
+        panelPhotos = items[idx].photos.split(',').filter(Boolean);
+        panelPhotoIdx = panelPhotos.length - 1;
+        renderPanelPhoto();
+        render();
+      }
+    } else { flash(res.error || 'Erreur sauvegarde', 'error'); }
+  } catch (e) { flash(e.message || 'Échec upload photo', 'error'); }
 }
 
 // ── Etat ──
@@ -798,21 +796,18 @@ async function submitAdd() {
     flash(`"${nom}" créé ✓`);
     await load();
 
-    // Photo en arrière-plan
+    // Upload photo via ImgBB
     if (photoFile) {
-      resizeFile(photoFile, 400, 0.4, base64 => {
-        API.addGollectPhoto(ref, base64)
-          .then(res => {
-            if (res.success) {
-              flash('Photo ajoutée ✓');
-              const idx = items.findIndex(i => i.ref === ref);
-              if (idx >= 0) { items[idx].photos = res.url; render(); }
-            } else {
-              flash('Article créé, mais photo non envoyée ⚠️', 'error');
-            }
-          })
-          .catch(() => flash('Article créé, mais photo non envoyée ⚠️', 'error'));
-      });
+      uploadPhoto(photoFile)
+        .then(url => API.saveGollectPhotoUrl(ref, url))
+        .then(res => {
+          if (res.success) {
+            flash('Photo ajoutée ✓');
+            const idx = items.findIndex(i => i.ref === ref);
+            if (idx >= 0) { items[idx].photos = res.url; render(); }
+          } else { flash('Article créé, photo non envoyée ⚠️', 'error'); }
+        })
+        .catch(() => flash('Article créé, photo non envoyée ⚠️', 'error'));
     }
   } catch { flash('Erreur réseau', 'error'); }
 
@@ -826,22 +821,30 @@ function openLB(url) {
 }
 function closeLB() { document.getElementById('lightbox').classList.remove('open'); }
 
-// ── Image resize ──
-function resizeFile(file, maxPx, quality, cb) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      cb(c.toDataURL('image/jpeg', quality));
+// ── Image resize + upload ImgBB ──
+function resizeFile(file, maxPx, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPhoto(file) {
+  const base64 = await resizeFile(file, 800, 0.7);
+  const url = await API.uploadPhoto(base64);
+  return url;
 }
 
 load();
