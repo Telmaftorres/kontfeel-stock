@@ -8,68 +8,164 @@
   <style>
     @media print {
       @page { size: A4; margin: 10mm; }
+      .no-print { display: none !important; }
+      body { background: white; }
+      .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; }
+      .label-card { border: 1.5px solid #999; border-radius: 8px; padding: 12px 8px; text-align: center; break-inside: avoid; }
     }
+
+    .articles-list { max-width: 640px; margin: 0 auto; padding: 0 16px 100px; }
+
+    .article-row {
+      display: flex; align-items: center; gap: 12px;
+      background: white; border: 1px solid var(--slate-200);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+      transition: border-color 0.15s;
+    }
+    .article-row.selected { border-color: #4f46e5; background: #eef2ff; }
+
+    .article-row input[type=checkbox] {
+      width: 20px; height: 20px; accent-color: #4f46e5; cursor: pointer; flex-shrink: 0;
+    }
+
+    .article-row-info { flex: 1; min-width: 0; }
+    .article-row-name { font-size: 14px; font-weight: 600; color: var(--slate-900); }
+    .article-row-meta { font-size: 12px; color: var(--slate-400); margin-top: 1px; }
+
+    .qty-input {
+      width: 56px; height: 36px;
+      border: 1px solid var(--slate-200); border-radius: 8px;
+      text-align: center; font-size: 15px; font-weight: 600;
+      color: var(--slate-900); background: white; outline: none;
+    }
+    .qty-input:focus { border-color: #4f46e5; }
+
+    .sticky-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white; border-top: 1px solid var(--slate-200);
+      padding: 12px 16px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .selected-count { font-size: 14px; color: var(--slate-500); }
+    .selected-count strong { color: var(--slate-900); }
+
+    .print-grid { display: none; }
   </style>
 </head>
 <body>
   <nav class="nav no-print">
     <a class="nav-logo" href="index.html">📦 K-Stock</a>
     <div class="nav-links">
-      <a class="nav-link" href="index.html">Articles</a>
-      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="index.html">Scanner</a>
+      <a class="nav-link" href="articles.html">Articles</a>
       <a class="nav-link active" href="labels.html">Étiquettes</a>
     </div>
   </nav>
 
-  <div class="no-print container" style="padding-bottom:0">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-      <div>
-        <h2 style="font-size:16px;font-weight:700;">Étiquettes à imprimer</h2>
-        <p style="font-size:13px;color:var(--slate-400);margin-top:2px;">Chaque étiquette contient un QR code qui ouvre directement la page de scan.</p>
-      </div>
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimer</button>
+  <div class="no-print" style="max-width:640px;margin:0 auto;padding:16px 16px 4px;">
+    <h2 style="font-size:16px;font-weight:700;">Étiquettes à imprimer</h2>
+    <p style="font-size:13px;color:var(--slate-400);margin-top:4px;">Coche les articles, choisis la quantité, puis imprime.</p>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline btn-sm" onclick="selectAll()">Tout sélectionner</button>
+      <button class="btn btn-outline btn-sm" onclick="selectNone()">Tout décocher</button>
     </div>
   </div>
 
-  <div class="label-grid" id="label-grid">
-    <div class="spinner no-print"></div>
+  <div class="articles-list no-print" id="articles-list">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Zone d'impression (cachée à l'écran, visible à l'impression) -->
+  <div class="print-grid" id="print-grid"></div>
+
+  <div class="sticky-bar no-print">
+    <div class="selected-count" id="selected-count">Aucun article sélectionné</div>
+    <button class="btn btn-primary" onclick="doPrint()">🖨️ Imprimer</button>
   </div>
 
   <script src="config.js"></script>
   <script src="api.js"></script>
   <script>
     const ZONES = {
-      PALETTE: 'Stockage palette', CHUTE: 'Chute de matière',
-      CONSO: 'Consommables', RACK: 'Matière racks',
-      RELIQUAT: 'Reliquat', 'BOX-LOG': 'Box logistique',
-      SHOWROOM: 'Showroom', BE: 'Zone BE',
-      MATERIAU: 'Matériautheque', FACONNE: 'Façonnage',
-      LOGISTIQUE: 'Logistique',
+      PALETTE:'Stockage palette', CHUTE:'Chute de matière', CONSO:'Consommables',
+      RACK:'Matière racks', RELIQUAT:'Reliquat', 'BOX-LOG':'Box logistique',
+      SHOWROOM:'Showroom', BE:'Zone BE', MATERIAU:'Matériautheque',
+      FACONNE:'Façonnage', LOGISTIQUE:'Logistique',
     };
 
+    let articles = [];
+
     function qrUrl(ref) {
-      const base = 'https://kontfeel-stock.vercel.app';
-      const appUrl = base + '/scan.html?ref=' + encodeURIComponent(ref);
+      const appUrl = 'https://kontfeel-stock.vercel.app/scan.html?ref=' + encodeURIComponent(ref);
       return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(appUrl)}`;
     }
 
+    function updateCount() {
+      const checked = document.querySelectorAll('.art-check:checked');
+      const count = checked.length;
+      document.getElementById('selected-count').innerHTML =
+        count === 0 ? 'Aucun article sélectionné'
+        : `<strong>${count}</strong> article${count>1?'s':''} sélectionné${count>1?'s':''}`;
+    }
+
+    function selectAll() {
+      document.querySelectorAll('.art-check').forEach(c => { c.checked = true; c.closest('.article-row').classList.add('selected'); });
+      updateCount();
+    }
+
+    function selectNone() {
+      document.querySelectorAll('.art-check').forEach(c => { c.checked = false; c.closest('.article-row').classList.remove('selected'); });
+      updateCount();
+    }
+
+    function doPrint() {
+      const selected = [];
+      document.querySelectorAll('.art-check:checked').forEach(c => {
+        const ref = c.dataset.ref;
+        const qty = parseInt(document.getElementById('qty-' + ref).value) || 1;
+        const art = articles.find(a => a.ref === ref);
+        if (art) selected.push({ ...art, qty });
+      });
+
+      if (!selected.length) { alert('Sélectionne au moins un article.'); return; }
+
+      // Construire la grille d'impression
+      const grid = document.getElementById('print-grid');
+      grid.innerHTML = selected.flatMap(a =>
+        Array(a.qty).fill(`
+          <div class="label-card">
+            <img style="width:110px;height:110px;display:block;margin:0 auto 8px;" src="${qrUrl(a.ref)}" />
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4f46e5;margin-bottom:3px;">${ZONES[a.zone]||a.zone||''}</div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:3px;line-height:1.3;">${a.nom}</div>
+            <div style="font-size:10px;color:#94a3b8;font-family:monospace;">${a.ref}</div>
+          </div>`)
+      ).join('');
+
+      grid.style.display = 'grid';
+      window.print();
+      setTimeout(() => { grid.style.display = 'none'; }, 1000);
+    }
+
     async function load() {
-      const grid = document.getElementById('label-grid');
+      const list = document.getElementById('articles-list');
       try {
-        const articles = await API.listArticles();
+        articles = await API.listArticles();
         if (!articles.length) {
-          grid.innerHTML = '<div class="empty no-print"><div class="empty-icon">📭</div><div class="empty-text">Aucun article. Crée des articles dans l\'Admin d\'abord.</div></div>';
+          list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Aucun article.</div></div>';
           return;
         }
-        grid.innerHTML = articles.map(a => `
-          <div class="label-card">
-            <img class="label-qr" src="${qrUrl(a.ref)}" alt="QR ${a.ref}" loading="lazy" />
-            <div class="label-zone">${ZONES[a.zone] || a.zone || ''}</div>
-            <div class="label-name">${a.nom}</div>
-            <div class="label-ref">${a.ref}</div>
+        list.innerHTML = articles.map(a => `
+          <div class="article-row" id="row-${a.ref}">
+            <input type="checkbox" class="art-check" data-ref="${a.ref}"
+              onchange="this.closest('.article-row').classList.toggle('selected',this.checked);updateCount()" />
+            <div class="article-row-info">
+              <div class="article-row-name">${a.nom}</div>
+              <div class="article-row-meta">${ZONES[a.zone]||a.zone||''} · ${a.ref}</div>
+            </div>
+            <input type="number" class="qty-input" id="qty-${a.ref}" value="1" min="1" max="20" title="Nombre d'étiquettes" />
           </div>`).join('');
       } catch {
-        grid.innerHTML = '<div class="empty no-print"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
+        list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
       }
     }
 
