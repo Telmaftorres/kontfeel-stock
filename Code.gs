@@ -20,9 +20,11 @@ function doGet(e) {
   const action = (e.parameter && e.parameter.action) || 'list';
   const ref    = (e.parameter && e.parameter.ref)    || '';
 
-  if (action === 'list')    return ok(getArticles());
-  if (action === 'get')     return ok(getArticle(ref));
-  if (action === 'history') return ok(getHistory());
+  if (action === 'list')         return ok(getArticles());
+  if (action === 'get')          return ok(getArticle(ref));
+  if (action === 'history')      return ok(getHistory());
+  if (action === 'gollect_list') return ok(getGollectItems());
+  if (action === 'gollect_get')  return ok(getGollectItem(ref));
   return ok({ error: 'Unknown action' });
 }
 
@@ -31,10 +33,14 @@ function doPost(e) {
   try { data = JSON.parse(e.postData.contents); }
   catch { return ok({ error: 'Invalid JSON' }); }
 
-  if (data.action === 'movement')      return ok(recordMovement(data));
-  if (data.action === 'add_article')   return ok(addArticle(data));
-  if (data.action === 'update_article')return ok(updateArticle(data));
-  if (data.action === 'delete_article')return ok(deleteArticle(data.ref));
+  if (data.action === 'movement')          return ok(recordMovement(data));
+  if (data.action === 'add_article')       return ok(addArticle(data));
+  if (data.action === 'update_article')    return ok(updateArticle(data));
+  if (data.action === 'delete_article')    return ok(deleteArticle(data.ref));
+  if (data.action === 'add_gollect')       return ok(addGollectItem(data));
+  if (data.action === 'gollect_movement')  return ok(gollectMovement(data));
+  if (data.action === 'gollect_etat')      return ok(updateGollectEtat(data));
+  if (data.action === 'add_gollect_photo') return ok(addGollectPhoto(data));
   return ok({ error: 'Unknown action' });
 }
 
@@ -177,6 +183,110 @@ function rowToObj(headers, row) {
   headers.forEach((h, i) => { obj[h] = row[i]; });
   if (obj.timestamp instanceof Date) obj.timestamp = obj.timestamp.toISOString();
   return obj;
+}
+
+// ── Gollect ──────────────────────────────────────────────
+
+const GOL = 'Gollect';
+
+function getGollectItems() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('gollect');
+  if (cached) return JSON.parse(cached);
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(GOL);
+  if (!sheet) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  const h = rows[0];
+  const items = rows.slice(1).filter(r => r[0]).map(r => rowToObj(h, r));
+  cache.put('gollect', JSON.stringify(items), 1800);
+  return items;
+}
+
+function getGollectItem(ref) {
+  const items = getGollectItems();
+  return items.find(i => i.ref === ref) || { error: 'Article introuvable' };
+}
+
+function addGollectItem(d) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(GOL);
+  if (!sheet) {
+    sheet = ss.insertSheet(GOL);
+    sheet.getRange(1,1,1,7).setValues([['ref','nom','description','etat','stock_actuel','photos','date_ajout']]);
+    sheet.getRange(1,1,1,7).setFontWeight('bold').setBackground('#dcfce7');
+  }
+  const rows = sheet.getDataRange().getValues();
+  if (rows.slice(1).some(r => r[0] === d.ref)) return { error: 'Référence déjà utilisée' };
+  sheet.appendRow([d.ref, d.nom, d.description||'', d.etat||'bon_etat', parseInt(d.stock_actuel)||0, '', new Date()]);
+  CacheService.getScriptCache().remove('gollect');
+  return { success: true };
+}
+
+function gollectMovement(d) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(GOL);
+  if (!sheet) return { error: 'Onglet Gollect introuvable' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const i = rows.findIndex((r, idx) => idx > 0 && r[0] === d.ref);
+  if (i === -1) return { error: 'Article introuvable' };
+  const stockCol = h.indexOf('stock_actuel');
+  const stockBefore = parseInt(rows[i][stockCol]) || 0;
+  const qty = parseInt(d.qty) || 1;
+  const stockAfter = d.type === 'entree' ? stockBefore + qty : Math.max(0, stockBefore - qty);
+  sheet.getRange(i + 1, stockCol + 1).setValue(stockAfter);
+  // Log dans Mouvements
+  const movSheet = ss.getSheetByName(MOV);
+  if (movSheet) movSheet.appendRow([new Date(), d.ref, rows[i][h.indexOf('nom')], 'GOLLECT', d.type, qty, stockBefore, stockAfter, d.employe||'Anonyme']);
+  CacheService.getScriptCache().remove('gollect');
+  return { success: true, stock_actuel: stockAfter };
+}
+
+function updateGollectEtat(d) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(GOL);
+  if (!sheet) return { error: 'Onglet Gollect introuvable' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const i = rows.findIndex((r, idx) => idx > 0 && r[0] === d.ref);
+  if (i === -1) return { error: 'Article introuvable' };
+  if (d.etat) sheet.getRange(i+1, h.indexOf('etat')+1).setValue(d.etat);
+  if (d.description !== undefined) sheet.getRange(i+1, h.indexOf('description')+1).setValue(d.description);
+  CacheService.getScriptCache().remove('gollect');
+  return { success: true };
+}
+
+function addGollectPhoto(d) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(GOL);
+  if (!sheet) return { error: 'Onglet Gollect introuvable' };
+  const rows = sheet.getDataRange().getValues();
+  const h = rows[0];
+  const i = rows.findIndex((r, idx) => idx > 0 && r[0] === d.ref);
+  if (i === -1) return { error: 'Article introuvable' };
+
+  // Upload vers Drive
+  const folder = getOrCreateGollectFolder();
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(d.photo.split(',')[1]),
+    'image/jpeg',
+    `${d.ref}_${Date.now()}.jpg`
+  );
+  const file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const url = `https://drive.google.com/uc?id=${file.getId()}`;
+
+  // Ajouter l'URL dans la colonne photos
+  const photosCol = h.indexOf('photos');
+  const existing = rows[i][photosCol] ? rows[i][photosCol] + ',' : '';
+  sheet.getRange(i+1, photosCol+1).setValue(existing + url);
+  CacheService.getScriptCache().remove('gollect');
+  return { success: true, url };
+}
+
+function getOrCreateGollectFolder() {
+  const name = 'Kontfeel-Gollect-Photos';
+  const folders = DriveApp.getFoldersByName(name);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
 }
 
 // ── Init (lance une seule fois) ──────────────────────────

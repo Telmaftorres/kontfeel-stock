@@ -1,5 +1,5 @@
-const CACHE = 'kstock-v4';
-const SHELL = ['/', '/index.html', '/scan.html', '/admin.html', '/articles.html', '/labels.html', '/style.css', '/api.js', '/config.js'];
+const CACHE = 'kstock-v5';
+const SHELL = ['/', '/index.html', '/scan.html', '/admin.html', '/articles.html', '/labels.html', '/inventaire.html', '/gollect.html', '/gollect-list.html', '/style.css', '/api.js', '/config.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));

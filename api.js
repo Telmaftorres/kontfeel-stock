@@ -43,4 +43,12 @@ const API = {
   async getHistory() {
     return this.get('history');
   },
+
+  // ── Gollect ──
+  async listGollect() { return this.get('gollect_list'); },
+  async getGollectItem(ref) { return this.get('gollect_get', { ref }); },
+  async addGollectItem(d) { return this.post({ action: 'add_gollect', ...d }); },
+  async gollectMovement(ref, type, qty, employe) { return this.post({ action: 'gollect_movement', ref, type, qty, employe }); },
+  async updateGollectEtat(ref, etat, description) { return this.post({ action: 'gollect_etat', ref, etat, description }); },
+  async addGollectPhoto(ref, photo) { return this.post({ action: 'add_gollect_photo', ref, photo }); },
 };

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Gollect — Liste</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #14532d; min-height: 100vh; color: #f0fdf4; }
+
+  /* ── Header ── */
+  header {
+    background: #166534;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .icon-btn {
+    background: none; border: none; color: #4ade80;
+    font-size: 20px; cursor: pointer; padding: 6px;
+    border-radius: 8px; text-decoration: none;
+    transition: background .15s;
+  }
+  .icon-btn:hover { background: rgba(74,222,128,.15); }
+  header h1 { flex: 1; font-size: 18px; font-weight: 700; color: #4ade80; }
+  header .count { font-size: 13px; color: #86efac; }
+
+  /* ── Search ── */
+  .search-bar {
+    padding: 12px 16px;
+    background: #166534;
+    border-bottom: 1px solid #15803d;
+  }
+  .search-bar input {
+    width: 100%; padding: 10px 14px;
+    border-radius: 10px; border: 1px solid #15803d;
+    background: #14532d; color: #f0fdf4;
+    font-size: 15px; outline: none;
+  }
+  .search-bar input::placeholder { color: #86efac; }
+  .search-bar input:focus { border-color: #4ade80; }
+
+  /* ── Filters ── */
+  .filters {
+    display: flex; gap: 8px; padding: 10px 16px;
+    overflow-x: auto; background: #166534;
+    border-bottom: 1px solid #15803d;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-btn {
+    padding: 5px 12px; border-radius: 20px; border: 1px solid #15803d;
+    background: none; color: #86efac; font-size: 13px; cursor: pointer;
+    white-space: nowrap; transition: all .15s;
+  }
+  .filter-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+
+  /* ── List ── */
+  .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: #166534;
+    border-radius: 14px;
+    border: 1px solid #15803d;
+    padding: 14px;
+    display: flex; gap: 12px; align-items: flex-start;
+    cursor: pointer; transition: background .15s;
+  }
+  .card:hover { background: #15803d; }
+
+  .card-thumb {
+    width: 56px; height: 56px; border-radius: 8px;
+    background: #15803d; flex-shrink: 0;
+    overflow: hidden; display: flex; align-items: center;
+    justify-content: center; font-size: 28px;
+  }
+  .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .card-body { flex: 1; min-width: 0; }
+  .card-ref { font-size: 11px; color: #86efac; margin-bottom: 2px; }
+  .card-nom { font-size: 15px; font-weight: 600; color: #f0fdf4; margin-bottom: 4px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-desc { font-size: 12px; color: #86efac; white-space: nowrap;
+                overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+  .card-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .etat-badge {
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .etat-comme_neuf    { background: #dcfce7; color: #166534; }
+  .etat-tres_bon_etat { background: #d1fae5; color: #065f46; }
+  .etat-bon_etat      { background: #fef9c3; color: #713f12; }
+  .etat-mauvais_etat  { background: #fee2e2; color: #7f1d1d; }
+
+  .stock-badge {
+    font-size: 12px; font-weight: 700; color: #4ade80;
+    background: rgba(74,222,128,.12); padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .stock-badge.zero { color: #f87171; background: rgba(248,113,113,.12); }
+
+  .photos-count { font-size: 11px; color: #86efac; }
+
+  /* ── Empty / loading ── */
+  .empty {
+    text-align: center; padding: 60px 24px; color: #86efac;
+    display: none; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .empty.show { display: flex; }
+  .empty .icon { font-size: 48px; }
+
+  .loading {
+    text-align: center; padding: 40px; color: #86efac;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid #15803d;
+    border-top-color: #4ade80; border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Detail modal ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); z-index: 100;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #166534; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px;
+    max-height: 85vh; overflow-y: auto;
+    padding: 20px;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .modal-header h2 { flex: 1; font-size: 18px; color: #4ade80; }
+  .modal-close {
+    background: none; border: none; color: #86efac; font-size: 22px;
+    cursor: pointer; padding: 4px;
+  }
+  .modal-ref { font-size: 12px; color: #86efac; margin-bottom: 12px; }
+
+  .modal-section { margin-bottom: 14px; }
+  .modal-label { font-size: 11px; color: #86efac; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .modal-value { font-size: 15px; color: #f0fdf4; }
+
+  .modal-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .modal-photos img {
+    width: 80px; height: 80px; border-radius: 8px;
+    object-fit: cover; cursor: pointer; border: 2px solid #15803d;
+  }
+  .modal-photos img:hover { border-color: #4ade80; }
+
+  .modal-stock-row {
+    display: flex; gap: 12px; align-items: center;
+    background: #14532d; border-radius: 12px; padding: 14px;
+    margin-bottom: 14px;
+  }
+  .modal-stock-num { font-size: 32px; font-weight: 800; color: #4ade80; }
+  .modal-stock-label { font-size: 13px; color: #86efac; }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-sortie, .btn-entree {
+    flex: 1; padding: 14px; border-radius: 12px; border: none;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn-sortie { background: #dc2626; color: #fff; }
+  .btn-entree { background: #16a34a; color: #fff; }
+  .btn-sortie:active, .btn-entree:active { opacity: .8; }
+
+  .qty-row {
+    display: flex; align-items: center; gap: 12px;
+    justify-content: center; margin-bottom: 12px;
+  }
+  .qty-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid #4ade80;
+    background: none; color: #4ade80; font-size: 22px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #modalQty {
+    font-size: 28px; font-weight: 700; color: #f0fdf4;
+    width: 60px; text-align: center;
+  }
+
+  /* ── Lightbox ── */
+  .lightbox {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.9); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 12px; }
+  .lightbox-close {
+    position: absolute; top: 16px; right: 16px;
+    color: #fff; font-size: 32px; cursor: pointer;
+    background: rgba(0,0,0,.5); border: none;
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed; bottom: 24px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #16a34a; color: #fff; font-size: 28px;
+    border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 40; transition: transform .15s;
+  }
+  .fab:active { transform: scale(.92); }
+
+  .fab-scanner {
+    position: fixed; bottom: 90px; right: 20px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #15803d; color: #4ade80; font-size: 22px;
+    border: 2px solid #4ade80; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 40; transition: transform .15s;
+    text-decoration: none;
+  }
+  .fab-scanner:active { transform: scale(.92); }
+
+  /* ── Add modal ── */
+  .add-modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); z-index: 100;
+    align-items: flex-end; justify-content: center;
+  }
+  .add-modal-bg.open { display: flex; }
+  .add-modal {
+    background: #166534; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px;
+    max-height: 90vh; overflow-y: auto;
+    padding: 20px;
+    animation: slideUp .25s ease;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 13px; color: #86efac; margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid #15803d; background: #14532d;
+    color: #f0fdf4; font-size: 15px; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: #4ade80;
+  }
+  .form-group textarea { min-height: 72px; resize: vertical; }
+  .form-group select option { background: #14532d; }
+  .ref-preview { font-size: 11px; color: #4ade80; margin-top: 4px; }
+  .btn-submit {
+    width: 100%; padding: 14px; border-radius: 12px;
+    border: none; background: #16a34a; color: #fff;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    margin-top: 6px;
+  }
+  .btn-submit:active { opacity: .85; }
+
+  /* ── Employee prompt ── */
+  .emp-bar {
+    padding: 8px 16px; background: #15803d;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: #86efac;
+  }
+  .emp-name { color: #4ade80; font-weight: 600; cursor: pointer; text-decoration: underline dotted; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="icon-btn" href="gollect.html" title="Scanner">◀</a>
+  <h1>♻️ Gollect</h1>
+  <span class="count" id="countLabel">— articles</span>
+  <a class="icon-btn" href="index.html" title="Stock principal">📦</a>
+</header>
+
+<div class="emp-bar">
+  Employé : <span class="emp-name" id="empDisplay" onclick="changeEmp()">—</span>
+</div>
+
+<div class="search-bar">
+  <input type="search" id="searchInput" placeholder="Rechercher un article Gollect..." oninput="filterItems()">
+</div>
+
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-etat="all" onclick="setFilter(this)">Tous</button>
+  <button class="filter-btn" data-etat="comme_neuf" onclick="setFilter(this)">Comme neuf</button>
+  <button class="filter-btn" data-etat="tres_bon_etat" onclick="setFilter(this)">Très bon état</button>
+  <button class="filter-btn" data-etat="bon_etat" onclick="setFilter(this)">Bon état</button>
+  <button class="filter-btn" data-etat="mauvais_etat" onclick="setFilter(this)">Mauvais état</button>
+</div>
+
+<div class="list" id="list">
+  <div class="loading">
+    <div class="spinner"></div>
+    <span>Chargement…</span>
+  </div>
+</div>
+
+<div class="empty" id="empty">
+  <span class="icon">♻️</span>
+  <strong>Aucun article Gollect</strong>
+  <span>Appuyez sur + pour en ajouter un</span>
+</div>
+
+<!-- FABs -->
+<a class="fab-scanner" href="gollect.html" title="Scanner">📷</a>
+<button class="fab" onclick="openAdd()" title="Ajouter un article">＋</button>
+
+<!-- Detail modal -->
+<div class="modal-bg" id="detailBg" onclick="closeDetail(event)">
+  <div class="modal" id="detailModal">
+    <div class="modal-header">
+      <h2 id="dNom">—</h2>
+      <button class="modal-close" onclick="closeDetailForce()">✕</button>
+    </div>
+    <div class="modal-ref" id="dRef">—</div>
+
+    <div class="modal-stock-row">
+      <div>
+        <div class="modal-stock-num" id="dStock">0</div>
+        <div class="modal-stock-label">en stock</div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">État</div>
+      <span class="etat-badge" id="dEtatBadge">—</span>
+    </div>
+
+    <div class="modal-section" id="dDescSection">
+      <div class="modal-label">Description</div>
+      <div class="modal-value" id="dDesc">—</div>
+    </div>
+
+    <div class="modal-section" id="dPhotosSection">
+      <div class="modal-label">Photos</div>
+      <div class="modal-photos" id="dPhotos"></div>
+    </div>
+
+    <div class="qty-row">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <input id="modalQty" type="number" value="1" min="1" max="999">
+      <button class="qty-btn" onclick="changeQty(1)">＋</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-sortie" onclick="doMovement('sortie')">SORTIE</button>
+      <button class="btn-entree" onclick="doMovement('entree')">ENTRÉE</button>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:8px;">
+      <button onclick="openEtatEdit()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #15803d;background:none;color:#86efac;font-size:13px;cursor:pointer;">
+        ✏️ Modifier état
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Add modal -->
+<div class="add-modal-bg" id="addBg" onclick="closeAdd(event)">
+  <div class="add-modal">
+    <div class="modal-header">
+      <h2>Nouvel article Gollect</h2>
+      <button class="modal-close" onclick="closeAddForce()">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label>Nom *</label>
+      <input id="addNom" placeholder="ex. Présentoir acrylique A4" oninput="updateRefPreview()">
+      <div class="ref-preview" id="refPreview"></div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="addDesc" placeholder="Dimensions, couleur, matière…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>État initial</label>
+      <select id="addEtat">
+        <option value="comme_neuf">✨ Comme neuf</option>
+        <option value="tres_bon_etat">👍 Très bon état</option>
+        <option value="bon_etat" selected>✅ Bon état</option>
+        <option value="mauvais_etat">⚠️ Mauvais état</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Quantité initiale</label>
+      <input id="addStock" type="number" value="1" min="0">
+    </div>
+    <div class="form-group">
+      <label>Photo (optionnel)</label>
+      <input id="addPhoto" type="file" accept="image/*" capture="environment" style="color:#86efac">
+    </div>
+
+    <button class="btn-submit" onclick="submitAdd()">Ajouter</button>
+  </div>
+</div>
+
+<!-- Etat edit modal -->
+<div class="modal-bg" id="etatBg" onclick="closeEtat(event)">
+  <div class="modal" style="max-height:60vh;">
+    <div class="modal-header">
+      <h2>Modifier l'état</h2>
+      <button class="modal-close" onclick="closeEtatForce()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>État</label>
+      <select id="etatSelect">
+        <option value="comme_neuf">✨ Comme neuf</option>
+        <option value="tres_bon_etat">👍 Très bon état</option>
+        <option value="bon_etat">✅ Bon état</option>
+        <option value="mauvais_etat">⚠️ Mauvais état</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="etatDesc" placeholder="Mise à jour de la description…"></textarea>
+    </div>
+    <button class="btn-submit" onclick="submitEtat()">Enregistrer</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+let allItems = [];
+let currentItem = null;
+let currentFilter = 'all';
+
+const ETAT_LABELS = {
+  comme_neuf:    '✨ Comme neuf',
+  tres_bon_etat: '👍 Très bon état',
+  bon_etat:      '✅ Bon état',
+  mauvais_etat:  '⚠️ Mauvais état',
+};
+
+// ── Employee ──
+function getEmp() { return localStorage.getItem('gollect_emp') || localStorage.getItem('employe') || 'Anonyme'; }
+function setEmp(v) { localStorage.setItem('gollect_emp', v); localStorage.setItem('employe', v); }
+function changeEmp() {
+  const v = prompt('Votre nom :', getEmp());
+  if (v && v.trim()) { setEmp(v.trim()); document.getElementById('empDisplay').textContent = v.trim(); }
+}
+document.getElementById('empDisplay').textContent = getEmp();
+
+// ── Load ──
+async function load() {
+  try {
+    allItems = await API.listGollect();
+    if (!Array.isArray(allItems)) allItems = [];
+  } catch { allItems = []; }
+  renderList();
+}
+
+// ── Render ──
+function renderList() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const filtered = allItems.filter(it => {
+    const matchEtat = currentFilter === 'all' || it.etat === currentFilter;
+    const matchSearch = !q || it.nom?.toLowerCase().includes(q) || it.ref?.toLowerCase().includes(q) || it.description?.toLowerCase().includes(q);
+    return matchEtat && matchSearch;
+  });
+
+  document.getElementById('countLabel').textContent = `${filtered.length} article${filtered.length !== 1 ? 's' : ''}`;
+
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+
+  if (!filtered.length) {
+    list.innerHTML = '';
+    empty.classList.add('show');
+    return;
+  }
+  empty.classList.remove('show');
+
+  const photos = it => (it.photos || '').split(',').filter(Boolean);
+
+  list.innerHTML = filtered.map(it => {
+    const ps = photos(it);
+    const thumb = ps.length ? `<img src="${ps[0]}" loading="lazy">` : '<span>♻️</span>';
+    const stock = parseInt(it.stock_actuel) || 0;
+    return `
+    <div class="card" onclick="openDetail('${it.ref}')">
+      <div class="card-thumb">${thumb}</div>
+      <div class="card-body">
+        <div class="card-ref">${it.ref}</div>
+        <div class="card-nom">${it.nom || '—'}</div>
+        ${it.description ? `<div class="card-desc">${it.description}</div>` : ''}
+        <div class="card-foot">
+          <span class="etat-badge etat-${it.etat || 'bon_etat'}">${ETAT_LABELS[it.etat] || it.etat || '—'}</span>
+          <span class="stock-badge ${stock === 0 ? 'zero' : ''}">${stock} ex.</span>
+          ${ps.length > 0 ? `<span class="photos-count">📷 ${ps.length}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterItems() { renderList(); }
+function setFilter(btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.etat;
+  renderList();
+}
+
+// ── Detail modal ──
+function openDetail(ref) {
+  currentItem = allItems.find(it => it.ref === ref);
+  if (!currentItem) return;
+  const it = currentItem;
+
+  document.getElementById('dNom').textContent = it.nom || '—';
+  document.getElementById('dRef').textContent = it.ref;
+  document.getElementById('dStock').textContent = parseInt(it.stock_actuel) || 0;
+
+  const badge = document.getElementById('dEtatBadge');
+  badge.textContent = ETAT_LABELS[it.etat] || it.etat || '—';
+  badge.className = `etat-badge etat-${it.etat || 'bon_etat'}`;
+
+  const descSec = document.getElementById('dDescSection');
+  if (it.description) {
+    descSec.style.display = '';
+    document.getElementById('dDesc').textContent = it.description;
+  } else { descSec.style.display = 'none'; }
+
+  const photos = (it.photos || '').split(',').filter(Boolean);
+  const photosSec = document.getElementById('dPhotosSection');
+  if (photos.length) {
+    photosSec.style.display = '';
+    document.getElementById('dPhotos').innerHTML = photos.map(u =>
+      `<img src="${u}" onclick="openLightbox('${u}')">`
+    ).join('');
+  } else { photosSec.style.display = 'none'; }
+
+  document.getElementById('modalQty').value = 1;
+  document.getElementById('detailBg').classList.add('open');
+}
+function closeDetail(e) { if (e.target === document.getElementById('detailBg')) closeDetailForce(); }
+function closeDetailForce() { document.getElementById('detailBg').classList.remove('open'); }
+
+// ── Qty ──
+function changeQty(d) {
+  const el = document.getElementById('modalQty');
+  el.value = Math.max(1, (parseInt(el.value) || 1) + d);
+}
+
+// ── Movement ──
+async function doMovement(type) {
+  if (!currentItem) return;
+  const qty = parseInt(document.getElementById('modalQty').value) || 1;
+  const emp = getEmp();
+
+  const btn = type === 'sortie'
+    ? document.querySelector('.btn-sortie')
+    : document.querySelector('.btn-entree');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const res = await API.gollectMovement(currentItem.ref, type, qty, emp);
+    if (res.success) {
+      if (navigator.vibrate) navigator.vibrate(60);
+      currentItem.stock_actuel = res.stock_actuel;
+      document.getElementById('dStock').textContent = res.stock_actuel;
+      // update in allItems
+      const idx = allItems.findIndex(i => i.ref === currentItem.ref);
+      if (idx >= 0) allItems[idx].stock_actuel = res.stock_actuel;
+      renderList();
+      setTimeout(closeDetailForce, 600);
+    } else {
+      alert(res.error || 'Erreur');
+    }
+  } catch { alert('Erreur réseau'); }
+
+  btn.disabled = false;
+  btn.textContent = type === 'sortie' ? 'SORTIE' : 'ENTRÉE';
+}
+
+// ── Etat edit ──
+function openEtatEdit() {
+  if (!currentItem) return;
+  document.getElementById('etatSelect').value = currentItem.etat || 'bon_etat';
+  document.getElementById('etatDesc').value = currentItem.description || '';
+  document.getElementById('etatBg').classList.add('open');
+}
+function closeEtat(e) { if (e.target === document.getElementById('etatBg')) closeEtatForce(); }
+function closeEtatForce() { document.getElementById('etatBg').classList.remove('open'); }
+
+async function submitEtat() {
+  if (!currentItem) return;
+  const etat = document.getElementById('etatSelect').value;
+  const desc = document.getElementById('etatDesc').value.trim();
+  try {
+    const res = await API.updateGollectEtat(currentItem.ref, etat, desc);
+    if (res.success) {
+      currentItem.etat = etat;
+      currentItem.description = desc;
+      const idx = allItems.findIndex(i => i.ref === currentItem.ref);
+      if (idx >= 0) { allItems[idx].etat = etat; allItems[idx].description = desc; }
+      closeEtatForce();
+      openDetail(currentItem.ref);
+      renderList();
+    } else { alert(res.error || 'Erreur'); }
+  } catch { alert('Erreur réseau'); }
+}
+
+// ── Lightbox ──
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+// ── Add ──
+function genRef(nom) {
+  if (!nom) return '';
+  const compact = nom.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  return `GOL-${compact}`;
+}
+function updateRefPreview() {
+  const nom = document.getElementById('addNom').value.trim();
+  document.getElementById('refPreview').textContent = nom ? `Réf : ${genRef(nom)}` : '';
+}
+function openAdd() { document.getElementById('addBg').classList.add('open'); }
+function closeAdd(e) { if (e.target === document.getElementById('addBg')) closeAddForce(); }
+function closeAddForce() { document.getElementById('addBg').classList.remove('open'); }
+
+function resizeImage(file, maxPx, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      cb(canvas.toDataURL('image/jpeg', .8));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitAdd() {
+  const nom = document.getElementById('addNom').value.trim();
+  if (!nom) { alert('Le nom est obligatoire'); return; }
+
+  const ref = genRef(nom);
+  const desc = document.getElementById('addDesc').value.trim();
+  const etat = document.getElementById('addEtat').value;
+  const stock = parseInt(document.getElementById('addStock').value) || 0;
+  const photoFile = document.getElementById('addPhoto').files[0];
+
+  const btn = document.querySelector('#addBg .btn-submit');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+
+  try {
+    const res = await API.addGollectItem({ ref, nom, description: desc, etat, stock_actuel: stock });
+    if (!res.success) { alert(res.error || 'Erreur'); btn.disabled = false; btn.textContent = 'Ajouter'; return; }
+
+    if (photoFile) {
+      btn.textContent = 'Upload photo…';
+      await new Promise(resolve => {
+        resizeImage(photoFile, 1200, async base64 => {
+          await API.addGollectPhoto(ref, base64);
+          resolve();
+        });
+      });
+    }
+
+    closeAddForce();
+    document.getElementById('addNom').value = '';
+    document.getElementById('addDesc').value = '';
+    document.getElementById('addStock').value = '1';
+    document.getElementById('addPhoto').value = '';
+    updateRefPreview();
+    await load();
+  } catch { alert('Erreur réseau'); }
+
+  btn.disabled = false; btn.textContent = 'Ajouter';
+}
+
+load();
+</script>
+</body>
+</html>
