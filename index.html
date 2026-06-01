@@ -382,16 +382,18 @@
     <div class="modal-title">Nouvel article</div>
 
     <div class="form-group">
-      <label class="form-label">Référence *</label>
-      <input type="text" class="form-input" id="m-ref" placeholder="ex: RACK-PCM3000" autocapitalize="characters" />
+      <label class="form-label">Nom *</label>
+      <input type="text" class="form-input" id="m-nom" placeholder="ex: PCM 3000m" oninput="autoRef()" />
     </div>
     <div class="form-group">
-      <label class="form-label">Nom *</label>
-      <input type="text" class="form-input" id="m-nom" placeholder="ex: PCM 3000m" />
+      <label class="form-label" style="display:flex;justify-content:space-between;">
+        Référence <span style="font-weight:400;color:#94a3b8;font-size:12px;">générée auto</span>
+      </label>
+      <input type="text" class="form-input" id="m-ref" placeholder="générée automatiquement" style="color:#64748b;background:#f1f5f9;" readonly />
     </div>
     <div class="form-group">
       <label class="form-label">Zone *</label>
-      <select class="form-select" id="m-zone">
+      <select class="form-select" id="m-zone" onchange="autoRef()">
         <option value="">-- Choisir --</option>
         <option value="PALETTE">Stockage palette</option>
         <option value="CHUTE">Chute de matière</option>
@@ -568,6 +570,21 @@
   panel.addEventListener('touchend', e => {
     if (e.changedTouches[0].clientY - touchStartY > 60) closePanel();
   });
+
+  // ── Génération auto de référence ──
+  function autoRef() {
+    const nom  = document.getElementById('m-nom').value.trim();
+    const zone = document.getElementById('m-zone').value;
+    if (!nom) { document.getElementById('m-ref').value = ''; return; }
+    const slug = nom
+      .toUpperCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 12);
+    const prefix = zone ? zone.replace('BOX-LOG','BOXLOG').slice(0, 6) + '-' : '';
+    document.getElementById('m-ref').value = prefix + slug;
+  }
 
   // ── Modal ajout article ──
   function openModal() {
