@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Inventaire — K-Stock</title>
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc; color: #0f172a;
+      min-height: 100dvh; display: flex; flex-direction: column;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      background: white; border-bottom: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-back {
+      font-size: 14px; color: #475569; text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-title { font-size: 15px; font-weight: 700; }
+    .nav-progress { font-size: 13px; color: #94a3b8; }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      height: 3px; background: #e2e8f0;
+    }
+    .progress-fill {
+      height: 100%; background: #4f46e5;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Loading / done ── */
+    .center-screen {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px; text-align: center;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e2e8f0; border-top-color: #4f46e5;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Article card ── */
+    #article-screen { flex: 1; display: flex; flex-direction: column; padding: 24px 20px; }
+
+    .art-zone {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #4f46e5; margin-bottom: 6px;
+    }
+    .art-name { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 4px; line-height: 1.2; }
+    .art-ref  { font-size: 13px; color: #94a3b8; font-family: monospace; margin-bottom: 24px; }
+
+    .current-stock {
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .current-stock-label { font-size: 13px; color: #64748b; }
+    .current-stock-val { font-size: 22px; font-weight: 800; color: #0f172a; }
+
+    /* ── Saisie stock réel ── */
+    .input-label {
+      font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;
+    }
+
+    .stock-input-wrap {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 32px;
+    }
+    .qty-btn {
+      width: 56px; height: 56px; border: 2px solid #e2e8f0; border-radius: 50%;
+      background: white; font-size: 28px; font-weight: 300; color: #334155;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.1s;
+    }
+    .qty-btn:active { transform: scale(0.88); background: #f1f5f9; }
+    .stock-input {
+      flex: 1; height: 64px; border: 2px solid #4f46e5; border-radius: 14px;
+      text-align: center; font-size: 36px; font-weight: 800; color: #0f172a;
+      background: white; outline: none;
+    }
+
+    /* ── Boutons action ── */
+    .action-btns { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+
+    .btn-valider {
+      height: 60px; background: #4f46e5; color: white;
+      border: none; border-radius: 14px;
+      font-size: 18px; font-weight: 700; cursor: pointer;
+      transition: all 0.12s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-valider:active { transform: scale(0.97); background: #4338ca; }
+    .btn-valider:disabled { opacity: 0.5; }
+
+    .btn-passer {
+      height: 44px; background: transparent; color: #94a3b8;
+      border: none; font-size: 14px; cursor: pointer;
+    }
+    .btn-passer:active { color: #64748b; }
+
+    /* ── Écran fin ── */
+    .done-icon { font-size: 56px; margin-bottom: 16px; }
+    .done-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .done-sub { font-size: 14px; color: #64748b; margin-bottom: 32px; line-height: 1.5; }
+    .done-summary {
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 16px; margin-bottom: 24px; text-align: left; width: 100%; max-width: 400px;
+    }
+    .done-summary-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 10px; }
+    .done-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .done-row:last-child { border-bottom: none; }
+    .done-row-name { color: #334155; font-weight: 500; flex: 1; margin-right: 8px; }
+    .done-row-change { font-weight: 700; }
+    .done-row-change.up { color: #16a34a; }
+    .done-row-change.down { color: #dc2626; }
+    .done-row-change.same { color: #94a3b8; }
+
+    .btn-home {
+      background: #4f46e5; color: white; border: none;
+      padding: 14px 32px; border-radius: 12px;
+      font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+
+    /* Flash */
+    .flash {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 99;
+      white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .flash.show { opacity: 1; }
+    .flash.success { background: #16a34a; color: white; }
+    .flash.error   { background: #dc2626; color: white; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-back" href="index.html">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Retour
+  </a>
+  <span class="nav-title">📋 Inventaire</span>
+  <span class="nav-progress" id="progress-text"></span>
+</nav>
+
+<div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+<!-- Loading -->
+<div class="center-screen" id="loading-screen">
+  <div class="spinner"></div>
+  <p style="font-size:14px;color:#64748b;">Chargement des articles…</p>
+</div>
+
+<!-- Article -->
+<div id="article-screen" style="display:none;">
+  <div class="art-zone" id="art-zone"></div>
+  <div class="art-name" id="art-name"></div>
+  <div class="art-ref"  id="art-ref"></div>
+
+  <div class="current-stock">
+    <span class="current-stock-label">Stock enregistré</span>
+    <span class="current-stock-val" id="art-current-stock">—</span>
+  </div>
+
+  <div class="input-label">Stock réel compté :</div>
+  <div class="stock-input-wrap">
+    <button class="qty-btn" onclick="changeVal(-1)">−</button>
+    <input type="number" class="stock-input" id="stock-input" value="0" min="0" inputmode="numeric" />
+    <button class="qty-btn" onclick="changeVal(1)">+</button>
+  </div>
+
+  <div class="action-btns">
+    <button class="btn-valider" id="btn-valider" onclick="valider()">
+      Valider et suivant →
+    </button>
+    <button class="btn-passer" onclick="passer()">Passer cet article</button>
+  </div>
+</div>
+
+<!-- Fin inventaire -->
+<div class="center-screen" id="done-screen" style="display:none;">
+  <div class="done-icon">✅</div>
+  <div class="done-title">Inventaire terminé !</div>
+  <div class="done-sub" id="done-sub"></div>
+  <div class="done-summary" id="done-summary" style="display:none;">
+    <div class="done-summary-title">Modifications effectuées</div>
+    <div id="done-rows"></div>
+  </div>
+  <a class="btn-home" href="index.html">← Retour au scanner</a>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  const ZONES = {
+    PALETTE:'Palette', CHUTE:'Chute', CONSO:'Consommables',
+    RACK:'Rack', RELIQUAT:'Reliquat', 'BOX-LOG':'Box logistique',
+    SHOWROOM:'Showroom', BE:'Zone BE', MATERIAU:'Matériautheque',
+    FACONNE:'Façonnage', LOGISTIQUE:'Logistique',
+  };
+
+  let articles = [];
+  let current  = 0;
+  let changes  = []; // { nom, ref, avant, apres }
+
+  function showFlash(msg, type) {
+    const el = document.getElementById('flash');
+    el.textContent = msg; el.className = `flash show ${type}`;
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  function changeVal(delta) {
+    const input = document.getElementById('stock-input');
+    input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+  }
+
+  function updateProgress() {
+    const pct = articles.length ? (current / articles.length) * 100 : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-text').textContent =
+      articles.length ? `${current} / ${articles.length}` : '';
+  }
+
+  function showArticle(index) {
+    if (index >= articles.length) { showDone(); return; }
+    const a = articles[index];
+    document.getElementById('art-zone').textContent = ZONES[a.zone] || a.zone || '';
+    document.getElementById('art-name').textContent = a.nom;
+    document.getElementById('art-ref').textContent  = a.ref;
+    document.getElementById('art-current-stock').textContent = `${parseInt(a.stock_actuel)||0} ${a.unite||''}`;
+    document.getElementById('stock-input').value = parseInt(a.stock_actuel) || 0;
+    document.getElementById('stock-input').focus();
+    document.getElementById('loading-screen').style.display  = 'none';
+    document.getElementById('article-screen').style.display  = 'flex';
+    document.getElementById('done-screen').style.display     = 'none';
+    updateProgress();
+  }
+
+  async function valider() {
+    const a        = articles[current];
+    const newStock = parseInt(document.getElementById('stock-input').value) || 0;
+    const oldStock = parseInt(a.stock_actuel) || 0;
+    const btn      = document.getElementById('btn-valider');
+
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const res = await API.updateArticle({ ref: a.ref, stock_actuel: newStock });
+      if (res.error) throw new Error();
+      if (newStock !== oldStock) {
+        changes.push({ nom: a.nom, ref: a.ref, avant: oldStock, apres: newStock });
+      }
+      current++;
+      showArticle(current);
+    } catch {
+      showFlash('Erreur, réessaie', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Valider et suivant →';
+    }
+  }
+
+  function passer() {
+    current++;
+    showArticle(current);
+  }
+
+  function showDone() {
+    document.getElementById('article-screen').style.display = 'none';
+    document.getElementById('done-screen').style.display    = 'flex';
+    updateProgress();
+
+    const n = changes.length;
+    document.getElementById('done-sub').textContent =
+      n === 0 ? 'Aucune modification détectée.'
+      : `${n} article${n>1?'s':''} mis à jour.`;
+
+    if (n > 0) {
+      const summary = document.getElementById('done-summary');
+      summary.style.display = 'block';
+      document.getElementById('done-rows').innerHTML = changes.map(c => {
+        const diff = c.apres - c.avant;
+        const cls  = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same';
+        const sign = diff > 0 ? '+' : '';
+        return `<div class="done-row">
+          <span class="done-row-name">${c.nom}</span>
+          <span class="done-row-change ${cls}">${c.avant} → ${c.apres} (${sign}${diff})</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Valider avec Entrée
+  document.getElementById('stock-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') valider();
+  });
+
+  async function load() {
+    try {
+      articles = await API.listArticles();
+      if (!articles.length) {
+        document.getElementById('loading-screen').innerHTML =
+          '<div style="text-align:center;padding:32px;color:#64748b;">Aucun article dans le stock.</div>';
+        return;
+      }
+      updateProgress();
+      showArticle(0);
+    } catch {
+      document.getElementById('loading-screen').innerHTML =
+        '<div style="text-align:center;padding:32px;color:#dc2626;">Erreur de chargement.</div>';
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

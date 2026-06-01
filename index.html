@@ -319,6 +319,7 @@
     <span class="top-logo">📦 K-Stock</span>
     <div class="top-actions">
       <a class="icon-btn" href="articles.html" title="Articles">☰</a>
+      <a class="icon-btn" href="inventaire.html" title="Inventaire">📋</a>
       <a class="icon-btn" href="labels.html" title="Étiquettes">🏷</a>
       <a class="icon-btn" id="sheet-link" href="#" target="_blank" title="Google Sheet">📊</a>
     </div>
@@ -495,6 +496,7 @@
     }
     if (!ref) return;
 
+    if (navigator.vibrate) navigator.vibrate(80);
     scanCooldown = true;
     scanning = false;
     loading.style.display = 'flex';
