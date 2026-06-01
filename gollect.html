@@ -444,14 +444,14 @@
       }
       if (res.error) throw new Error(res.error);
 
-      // Upload photo si présente
-      if (modalPhotoBase64) {
-        const resized = await resizeImage(modalPhotoBase64, 600);
-        await API.addGollectPhoto(ref, resized);
-      }
-
       showFlash(`"${nom}" créé ✓`, 'success');
       closeModal();
+
+      // Upload photo en arrière-plan (non-bloquant)
+      if (modalPhotoBase64) {
+        const resized = await resizeImage(modalPhotoBase64, 400);
+        API.addGollectPhoto(ref, resized).catch(() => {});
+      }
     } catch (e) {
       showFlash(e.message || 'Erreur', 'error');
     } finally {
@@ -478,7 +478,7 @@
         const c = document.createElement('canvas');
         c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.5));
+        resolve(c.toDataURL('image/jpeg', 0.4));
       };
       img.src = base64;
     });

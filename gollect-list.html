@@ -649,7 +649,7 @@ function resizeImage(file, maxPx, cb) {
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      cb(canvas.toDataURL('image/jpeg', .5));
+      cb(canvas.toDataURL('image/jpeg', .4));
     };
     img.src = e.target.result;
   };
@@ -673,16 +673,6 @@ async function submitAdd() {
     const res = await API.addGollectItem({ ref, nom, description: desc, etat, stock_actuel: stock });
     if (!res.success) { alert(res.error || 'Erreur'); btn.disabled = false; btn.textContent = 'Ajouter'; return; }
 
-    if (photoFile) {
-      btn.textContent = 'Upload photo…';
-      await new Promise(resolve => {
-        resizeImage(photoFile, 600, async base64 => {
-          await API.addGollectPhoto(ref, base64);
-          resolve();
-        });
-      });
-    }
-
     closeAddForce();
     document.getElementById('addNom').value = '';
     document.getElementById('addDesc').value = '';
@@ -690,6 +680,13 @@ async function submitAdd() {
     document.getElementById('addPhoto').value = '';
     updateRefPreview();
     await load();
+
+    // Upload photo en arrière-plan (non-bloquant)
+    if (photoFile) {
+      resizeImage(photoFile, 400, base64 => {
+        API.addGollectPhoto(ref, base64).catch(() => {});
+      });
+    }
   } catch { alert('Erreur réseau'); }
 
   btn.disabled = false; btn.textContent = 'Ajouter';
