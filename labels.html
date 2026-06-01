@@ -6,12 +6,11 @@
   <title>Étiquettes — K-Stock</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* ── Écran ── */
     .articles-list { max-width: 640px; margin: 0 auto; padding: 0 16px 100px; }
     .article-row {
       display: flex; align-items: center; gap: 12px;
       background: white; border: 1px solid var(--slate-200);
-      border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 6px;
       transition: border-color 0.15s;
     }
     .article-row.selected { border-color: #4f46e5; background: #eef2ff; }
@@ -35,16 +34,12 @@
     .selected-count { font-size: 14px; color: var(--slate-500); }
     .selected-count strong { color: var(--slate-900); }
 
-    /* ── Panneau dimensions ── */
     .dim-panel {
       background: white; border: 1px solid var(--slate-200);
       border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
       max-width: 640px; margin-left: auto; margin-right: auto;
     }
-    .dim-panel-header {
-      display: flex; align-items: center; justify-content: space-between;
-      cursor: pointer; user-select: none;
-    }
+    .dim-panel-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
     .dim-panel-title { font-size: 13px; font-weight: 600; color: var(--slate-700); }
     .dim-panel-body { margin-top: 12px; display: none; }
     .dim-panel-body.open { display: block; }
@@ -57,58 +52,51 @@
     }
     .dim-field input:focus { border-color: #4f46e5; }
 
-    /* ── Zone impression ── */
     #print-area { display: none; }
 
+    /* ── IMPRESSION ── */
     @media print {
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @page { size: A4; margin: 0; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+      @page { size: A4 portrait; margin: 0; }
+      html, body { margin: 0; padding: 0; background: white; }
       .no-print { display: none !important; }
-      body { margin: 0; background: white; }
       #print-area { display: block !important; }
 
       .print-page {
         width: 210mm;
         height: 297mm;
-        padding: var(--page-margin-top) var(--page-margin-left);
-        box-sizing: border-box;
+        overflow: hidden;
         page-break-after: always;
       }
 
+      /* Grille sans aucun gap parasite */
       .print-row {
         display: flex;
-        gap: var(--gap-h);
-        margin-bottom: var(--gap-v);
+        width: 100%;
       }
 
       .plabel {
-        width: var(--label-w);
-        height: var(--label-h);
-        box-sizing: border-box;
-        border: 0.3mm solid #ccc;
-        border-radius: 1.5mm;
-        padding: 1.5mm;
         display: flex;
         align-items: center;
-        gap: 1.5mm;
         overflow: hidden;
+        border: 0.4mm solid #bbb;
         flex-shrink: 0;
       }
 
       .plabel img {
-        width: var(--qr-size);
-        height: var(--qr-size);
         flex-shrink: 0;
+        display: block;
       }
 
       .plabel-text {
         flex: 1;
         min-width: 0;
+        padding: 0 2mm;
         overflow: hidden;
       }
 
       .plabel-zone {
-        font-size: 5pt;
+        font-size: 6pt;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.03em;
@@ -119,26 +107,28 @@
       }
 
       .plabel-name {
-        font-size: 6.5pt;
+        font-size: 8pt;
         font-weight: 700;
         color: #0f172a;
-        line-height: 1.2;
+        line-height: 1.25;
+        margin-top: 0.8mm;
         overflow: hidden;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
-        margin-top: 0.5mm;
       }
 
       .plabel-ref {
-        font-size: 5pt;
-        color: #94a3b8;
+        font-size: 6pt;
+        color: #64748b;
         font-family: monospace;
-        margin-top: 0.5mm;
+        margin-top: 0.8mm;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
+      .plabel-empty { border: none !important; }
     }
   </style>
 </head>
@@ -157,27 +147,30 @@
   <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">Étiquettes à imprimer</h2>
   <p style="font-size:13px;color:var(--slate-400);margin-bottom:12px;">Coche les articles, règle la quantité, puis imprime.</p>
 
-  <!-- Panneau dimensions -->
+  <!-- Dimensions -->
   <div class="dim-panel">
     <div class="dim-panel-header" onclick="toggleDim()">
-      <span class="dim-panel-title">⚙️ Format étiquettes — <span id="dim-summary">48.5 × 25.4 mm · 4 col × 10 lignes</span></span>
+      <span class="dim-panel-title">⚙️ Format — <span id="dim-summary">105 × 35 mm · 2 col × 8 lignes</span></span>
       <span id="dim-arrow" style="font-size:12px;color:var(--slate-400);">▼</span>
     </div>
     <div class="dim-panel-body" id="dim-body">
       <div class="dim-grid">
-        <div class="dim-field"><label>Largeur étiquette (mm)</label><input type="number" id="d-w" value="48.5" step="0.1" oninput="updateDimSummary()" /></div>
-        <div class="dim-field"><label>Hauteur étiquette (mm)</label><input type="number" id="d-h" value="25.4" step="0.1" oninput="updateDimSummary()" /></div>
-        <div class="dim-field"><label>Nombre de colonnes</label><input type="number" id="d-cols" value="4" min="1" max="10" oninput="updateDimSummary()" /></div>
-        <div class="dim-field"><label>Nombre de lignes</label><input type="number" id="d-rows" value="10" min="1" max="20" oninput="updateDimSummary()" /></div>
-        <div class="dim-field"><label>Marge haut page (mm)</label><input type="number" id="d-mt" value="10" step="0.5" /></div>
-        <div class="dim-field"><label>Marge gauche page (mm)</label><input type="number" id="d-ml" value="5" step="0.5" /></div>
-        <div class="dim-field"><label>Espacement horizontal (mm)</label><input type="number" id="d-gh" value="0" step="0.5" /></div>
-        <div class="dim-field"><label>Espacement vertical (mm)</label><input type="number" id="d-gv" value="0" step="0.5" /></div>
+        <div class="dim-field"><label>Largeur étiquette (mm)</label><input type="number" id="d-w" value="105" step="0.1" oninput="updateDimSummary()" /></div>
+        <div class="dim-field"><label>Hauteur étiquette (mm)</label><input type="number" id="d-h" value="35" step="0.1" oninput="updateDimSummary()" /></div>
+        <div class="dim-field"><label>Colonnes</label><input type="number" id="d-cols" value="2" min="1" max="10" oninput="updateDimSummary()" /></div>
+        <div class="dim-field"><label>Lignes</label><input type="number" id="d-rows" value="8" min="1" max="20" oninput="updateDimSummary()" /></div>
+        <div class="dim-field"><label>Marge haut (mm)</label><input type="number" id="d-mt" value="0" step="0.5" /></div>
+        <div class="dim-field"><label>Marge gauche (mm)</label><input type="number" id="d-ml" value="0" step="0.5" /></div>
       </div>
     </div>
   </div>
 
-  <div style="display:flex;gap:8px;margin-bottom:8px;">
+  <!-- Recherche + actions -->
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <div class="search-wrap" style="flex:1;min-width:180px;margin-bottom:0;">
+      <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" class="search-input" id="search" placeholder="Rechercher un article…" oninput="filterList()" />
+    </div>
     <button class="btn btn-outline btn-sm" onclick="selectAll()">Tout sélectionner</button>
     <button class="btn btn-outline btn-sm" onclick="selectNone()">Tout décocher</button>
   </div>
@@ -187,7 +180,6 @@
   <div class="spinner"></div>
 </div>
 
-<!-- Zone impression -->
 <div id="print-area"></div>
 
 <div class="sticky-bar no-print">
@@ -209,22 +201,19 @@
 
   function getDims() {
     return {
-      w:    parseFloat(document.getElementById('d-w').value)    || 48.5,
-      h:    parseFloat(document.getElementById('d-h').value)    || 25.4,
-      cols: parseInt(document.getElementById('d-cols').value)   || 4,
-      rows: parseInt(document.getElementById('d-rows').value)   || 10,
-      mt:   parseFloat(document.getElementById('d-mt').value)   || 10,
-      ml:   parseFloat(document.getElementById('d-ml').value)   || 5,
-      gh:   parseFloat(document.getElementById('d-gh').value)   || 0,
-      gv:   parseFloat(document.getElementById('d-gv').value)   || 0,
+      w:    parseFloat(document.getElementById('d-w').value)  || 105,
+      h:    parseFloat(document.getElementById('d-h').value)  || 35,
+      cols: parseInt(document.getElementById('d-cols').value) || 2,
+      rows: parseInt(document.getElementById('d-rows').value) || 8,
+      mt:   parseFloat(document.getElementById('d-mt').value) || 0,
+      ml:   parseFloat(document.getElementById('d-ml').value) || 0,
     };
   }
 
   function toggleDim() {
-    const body = document.getElementById('dim-body');
-    const arrow = document.getElementById('dim-arrow');
-    body.classList.toggle('open');
-    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+    document.getElementById('dim-body').classList.toggle('open');
+    document.getElementById('dim-arrow').textContent =
+      document.getElementById('dim-body').classList.contains('open') ? '▲' : '▼';
   }
 
   function updateDimSummary() {
@@ -233,9 +222,9 @@
       `${d.w} × ${d.h} mm · ${d.cols} col × ${d.rows} lignes`;
   }
 
-  function qrUrl(ref) {
+  function qrUrl(ref, sizePx) {
     const appUrl = 'https://kontfeel-stock.vercel.app/scan.html?ref=' + encodeURIComponent(ref);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=2&data=${encodeURIComponent(appUrl)}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&margin=2&data=${encodeURIComponent(appUrl)}`;
   }
 
   function updateCount() {
@@ -245,8 +234,30 @@
       : `<strong>${n}</strong> article${n>1?'s':''} sélectionné${n>1?'s':''}`;
   }
 
-  function selectAll()  { document.querySelectorAll('.art-check').forEach(c => { c.checked = true;  c.closest('.article-row').classList.add('selected'); }); updateCount(); }
-  function selectNone() { document.querySelectorAll('.art-check').forEach(c => { c.checked = false; c.closest('.article-row').classList.remove('selected'); }); updateCount(); }
+  function filterList() {
+    const q = document.getElementById('search').value.toLowerCase().trim();
+    document.querySelectorAll('.article-row').forEach(row => {
+      const text = row.querySelector('.article-row-name').textContent.toLowerCase()
+        + row.querySelector('.article-row-meta').textContent.toLowerCase();
+      row.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+  }
+
+  function selectAll() {
+    document.querySelectorAll('.art-check:not([style*="none"])').forEach(c => {
+      if (c.closest('.article-row').style.display !== 'none') {
+        c.checked = true; c.closest('.article-row').classList.add('selected');
+      }
+    });
+    updateCount();
+  }
+
+  function selectNone() {
+    document.querySelectorAll('.art-check').forEach(c => {
+      c.checked = false; c.closest('.article-row').classList.remove('selected');
+    });
+    updateCount();
+  }
 
   function doPrint() {
     const selected = [];
@@ -256,61 +267,43 @@
       const art = articles.find(a => a.ref === ref);
       if (art) for (let i = 0; i < qty; i++) selected.push(art);
     });
-
     if (!selected.length) { alert('Sélectionne au moins un article.'); return; }
 
     const d = getDims();
-    const qrSizeMm = Math.min(d.h - 3, 18);
+    // QR code : hauteur étiquette - 4mm de padding, converti en px (96dpi → 1mm ≈ 3.78px)
+    const qrMm  = Math.round(d.h - 4);
+    const qrPx  = Math.round(qrMm * 3.78);
 
-    // Injecter les CSS variables
-    const style = document.createElement('style');
-    style.id = 'print-vars';
-    style.textContent = `:root {
-      --label-w: ${d.w}mm;
-      --label-h: ${d.h}mm;
-      --page-margin-top: ${d.mt}mm;
-      --page-margin-left: ${d.ml}mm;
-      --gap-h: ${d.gh}mm;
-      --gap-v: ${d.gv}mm;
-      --qr-size: ${qrSizeMm}mm;
-    }`;
-    document.getElementById('print-vars')?.remove();
-    document.head.appendChild(style);
-
-    // Construire les pages
     const perPage = d.cols * d.rows;
-    const pages = [];
-    for (let i = 0; i < selected.length; i += perPage) {
-      pages.push(selected.slice(i, i + perPage));
-    }
+    const pages   = [];
+    for (let i = 0; i < selected.length; i += perPage) pages.push(selected.slice(i, i + perPage));
 
     const area = document.getElementById('print-area');
     area.innerHTML = pages.map(page => {
-      const rows = [];
+      let rowsHtml = '';
       for (let r = 0; r < d.rows; r++) {
-        const rowLabels = [];
+        let cells = '';
         for (let c = 0; c < d.cols; c++) {
           const art = page[r * d.cols + c];
           if (art) {
-            rowLabels.push(`
-              <div class="plabel">
-                <img src="${qrUrl(art.ref)}" />
-                <div class="plabel-text">
-                  <div class="plabel-zone">${ZONES[art.zone]||art.zone||''}</div>
-                  <div class="plabel-name">${art.nom}</div>
-                  <div class="plabel-ref">${art.ref}</div>
-                </div>
-              </div>`);
+            cells += `<div class="plabel" style="width:${d.w}mm;height:${d.h}mm;padding:2mm 0 2mm 2mm;">
+              <img src="${qrUrl(art.ref, qrPx)}" style="width:${qrMm}mm;height:${qrMm}mm;" />
+              <div class="plabel-text">
+                <div class="plabel-zone">${ZONES[art.zone]||art.zone||''}</div>
+                <div class="plabel-name">${art.nom}</div>
+                <div class="plabel-ref">${art.ref}</div>
+              </div>
+            </div>`;
           } else {
-            rowLabels.push(`<div class="plabel" style="border:none;"></div>`);
+            cells += `<div class="plabel plabel-empty" style="width:${d.w}mm;height:${d.h}mm;"></div>`;
           }
         }
-        rows.push(`<div class="print-row">${rowLabels.join('')}</div>`);
+        rowsHtml += `<div class="print-row">${cells}</div>`;
       }
-      return `<div class="print-page">${rows.join('')}</div>`;
+      return `<div class="print-page" style="padding-top:${d.mt}mm;padding-left:${d.ml}mm;">${rowsHtml}</div>`;
     }).join('');
 
-    setTimeout(() => window.print(), 300);
+    setTimeout(() => window.print(), 400);
   }
 
   async function load() {
@@ -329,7 +322,7 @@
             <div class="article-row-name">${a.nom}</div>
             <div class="article-row-meta">${ZONES[a.zone]||a.zone||''} · ${a.ref}</div>
           </div>
-          <input type="number" class="qty-input" id="qty-${a.ref}" value="1" min="1" max="50" title="Nb d'exemplaires" />
+          <input type="number" class="qty-input" id="qty-${a.ref}" value="1" min="1" max="50" />
         </div>`).join('');
     } catch {
       list.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>';
