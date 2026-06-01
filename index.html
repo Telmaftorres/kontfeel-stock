@@ -580,10 +580,9 @@
     const slug = nom
       .toUpperCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/[^A-Z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 12);
-    const prefix = zone ? zone.replace('BOX-LOG','BOXLOG').slice(0, 6) + '-' : '';
+      .replace(/[^A-Z0-9]+/g, '')
+      .slice(0, 10);
+    const prefix = zone ? zone.replace('BOX-LOG','BOX').slice(0, 3) + '-' : '';
     document.getElementById('m-ref').value = prefix + slug;
   }
 
