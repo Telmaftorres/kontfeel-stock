@@ -197,7 +197,23 @@
     }
 
     .panel-name { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 2px; }
-    .panel-ref  { font-size: 12px; color: #94a3b8; font-family: monospace; margin-bottom: 16px; }
+    .panel-ref  { font-size: 12px; color: #94a3b8; font-family: monospace; margin-bottom: 12px; }
+
+    /* Photo article */
+    .panel-photo-wrap {
+      width: 100%; aspect-ratio: 16/9; border-radius: 12px;
+      overflow: hidden; margin-bottom: 12px; background: #f1f5f9;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; cursor: pointer;
+    }
+    .panel-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .panel-photo-add {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px; border-radius: 12px; margin-bottom: 12px;
+      border: 2px dashed #cbd5e1; background: none; color: #94a3b8;
+      font-size: 13px; cursor: pointer;
+    }
+    .panel-photo-add:active { background: #f8fafc; }
 
     .stock-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -342,6 +358,15 @@
     <div class="panel-name" id="p-name"></div>
     <div class="panel-ref"  id="p-ref"></div>
 
+    <!-- Photo -->
+    <div class="panel-photo-wrap" id="p-photo-wrap" style="display:none" onclick="document.getElementById('p-photo-input').click()">
+      <img id="p-photo-img" src="" alt="">
+    </div>
+    <button class="panel-photo-add" id="p-photo-add" onclick="document.getElementById('p-photo-input').click()">
+      📷 <span id="p-photo-add-lbl">Ajouter une photo</span>
+    </button>
+    <input type="file" id="p-photo-input" accept="image/*" capture="environment" style="display:none" onchange="uploadArticlePhoto(this)">
+
     <div class="stock-row">
       <div>
         <div class="stock-label">Stock actuel</div>
@@ -437,6 +462,10 @@
     <div class="form-group">
       <label class="form-label">Stock initial</label>
       <input type="number" class="form-input" id="m-stock" value="0" min="0" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Photo (optionnel)</label>
+      <input type="file" class="form-input" id="m-photo" accept="image/*" capture="environment" style="color:#64748b" />
     </div>
 
     <div class="modal-actions">
@@ -540,8 +569,54 @@
     document.getElementById('p-ref').textContent   = article.ref;
     document.getElementById('p-stock').textContent = parseInt(article.stock_actuel) || 0;
     document.getElementById('p-unit').textContent  = article.unite || 'unité(s)';
+
+    const firstPhoto = article.photos ? article.photos.toString().split(',')[0].trim() : '';
+    const photoWrap = document.getElementById('p-photo-wrap');
+    const photoAdd  = document.getElementById('p-photo-add');
+    if (firstPhoto) {
+      document.getElementById('p-photo-img').src = firstPhoto;
+      photoWrap.style.display = 'block';
+      photoAdd.style.display  = 'none';
+    } else {
+      photoWrap.style.display = 'none';
+      photoAdd.style.display  = 'flex';
+    }
+    document.getElementById('p-photo-input').value = '';
+
     document.getElementById('scan-overlay').style.opacity = '0.3';
     panel.classList.add('open');
+  }
+
+  async function uploadArticlePhoto(input) {
+    if (!input.files[0] || !currentArticle) return;
+    const lbl = document.getElementById('p-photo-add-lbl');
+    lbl.textContent = 'Upload en cours…';
+    try {
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const url = await API.uploadPhoto(e.target.result);
+          const res = await API.savePhotoUrl(currentArticle.ref, url);
+          if (res.success) {
+            currentArticle.photos = url;
+            document.getElementById('p-photo-img').src = url;
+            document.getElementById('p-photo-wrap').style.display = 'block';
+            document.getElementById('p-photo-add').style.display = 'none';
+            showFlash('Photo ajoutée ✓', 'success');
+          } else {
+            lbl.textContent = 'Ajouter une photo';
+            showFlash('Erreur sauvegarde photo', 'error');
+          }
+        } catch {
+          lbl.textContent = 'Ajouter une photo';
+          showFlash('Erreur upload photo', 'error');
+        }
+      };
+      reader.readAsDataURL(input.files[0]);
+    } catch {
+      lbl.textContent = 'Ajouter une photo';
+      showFlash('Erreur lecture fichier', 'error');
+    }
   }
 
   function closePanel() {
@@ -614,7 +689,7 @@
 
   function closeModal() {
     document.getElementById('modal-backdrop').classList.remove('open');
-    ['m-ref','m-nom','m-unite'].forEach(id => document.getElementById(id).value = '');
+    ['m-ref','m-nom','m-unite','m-photo'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('m-cond').value = 'aucun';
     document.getElementById('m-stock').value = '0';
     document.getElementById('m-zone').value = '';
@@ -650,8 +725,22 @@
         }
       }
       if (res.error) throw new Error(res.error);
-      showFlash(`"${nom}" créé (${ref}) ✓`, 'success');
       closeModal();
+      showFlash(`"${nom}" créé ✓`, 'success');
+
+      // Upload photo en arrière-plan
+      const photoFile = document.getElementById('m-photo').files[0];
+      if (photoFile) {
+        const reader = new FileReader();
+        reader.onload = async e => {
+          try {
+            const url = await API.uploadPhoto(e.target.result);
+            await API.savePhotoUrl(ref, url);
+            showFlash('Photo ajoutée ✓', 'success');
+          } catch { showFlash('Article créé, photo non envoyée ⚠️', 'error'); }
+        };
+        reader.readAsDataURL(photoFile);
+      }
     } catch (e) {
       showFlash(e.message || 'Erreur', 'error');
     } finally {

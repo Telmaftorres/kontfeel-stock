@@ -52,6 +52,7 @@ const API = {
   async updateGollectEtat(ref, etat, description) { return this.post({ action: 'gollect_etat', ref, etat, description }); },
   async addGollectPhoto(ref, photo) { return this.post({ action: 'add_gollect_photo', ref, photo }); },
   async saveGollectPhotoUrl(ref, url) { return this.post({ action: 'save_gollect_photo_url', ref, url }); },
+  async savePhotoUrl(ref, url) { return this.post({ action: 'save_photo_url', ref, url }); },
 
   async uploadPhoto(base64) {
     const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
