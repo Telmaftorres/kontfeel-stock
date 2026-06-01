@@ -159,6 +159,7 @@
         <div class="dim-field"><label>Hauteur étiquette (mm)</label><input type="number" id="d-h" value="35" step="0.1" oninput="updateDimSummary()" /></div>
         <div class="dim-field"><label>Colonnes</label><input type="number" id="d-cols" value="2" min="1" max="10" oninput="updateDimSummary()" /></div>
         <div class="dim-field"><label>Lignes</label><input type="number" id="d-rows" value="8" min="1" max="20" oninput="updateDimSummary()" /></div>
+        <div class="dim-field"><label>Espace entre étiquettes (mm)</label><input type="number" id="d-gap" value="1" step="0.5" /></div>
         <div class="dim-field"><label>Marge haut (mm)</label><input type="number" id="d-mt" value="0" step="0.5" /></div>
         <div class="dim-field"><label>Marge gauche (mm)</label><input type="number" id="d-ml" value="0" step="0.5" /></div>
       </div>
@@ -205,6 +206,7 @@
       h:    parseFloat(document.getElementById('d-h').value)  || 35,
       cols: parseInt(document.getElementById('d-cols').value) || 2,
       rows: parseInt(document.getElementById('d-rows').value) || 8,
+      gap:  parseFloat(document.getElementById('d-gap').value) || 0,
       mt:   parseFloat(document.getElementById('d-mt').value) || 0,
       ml:   parseFloat(document.getElementById('d-ml').value) || 0,
     };
@@ -285,8 +287,9 @@
         let cells = '';
         for (let c = 0; c < d.cols; c++) {
           const art = page[r * d.cols + c];
+          const marginRight = c < d.cols - 1 ? `margin-right:${d.gap}mm;` : '';
           if (art) {
-            cells += `<div class="plabel" style="width:${d.w}mm;height:${d.h}mm;padding:2mm 0 2mm 2mm;">
+            cells += `<div class="plabel" style="width:${d.w}mm;height:${d.h}mm;padding:2mm 0 2mm 2mm;${marginRight}">
               <img src="${qrUrl(art.ref, qrPx)}" style="width:${qrMm}mm;height:${qrMm}mm;" />
               <div class="plabel-text">
                 <div class="plabel-zone">${ZONES[art.zone]||art.zone||''}</div>
@@ -295,10 +298,11 @@
               </div>
             </div>`;
           } else {
-            cells += `<div class="plabel plabel-empty" style="width:${d.w}mm;height:${d.h}mm;"></div>`;
+            cells += `<div class="plabel plabel-empty" style="width:${d.w}mm;height:${d.h}mm;${marginRight}"></div>`;
           }
         }
-        rowsHtml += `<div class="print-row">${cells}</div>`;
+        const marginBottom = r < d.rows - 1 ? `margin-bottom:${d.gap}mm;` : '';
+        rowsHtml += `<div class="print-row" style="${marginBottom}">${cells}</div>`;
       }
       return `<div class="print-page" style="padding-top:${d.mt}mm;padding-left:${d.ml}mm;">${rowsHtml}</div>`;
     }).join('');
