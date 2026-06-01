@@ -3,693 +3,845 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Gollect — Liste</title>
+<title>Gollect — Catalogue</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-         background: #14532d; min-height: 100vh; color: #f0fdf4; }
+         background: #0a2e1a; min-height: 100vh; color: #f0fdf4; }
 
   /* ── Header ── */
   header {
-    background: #166534;
+    background: #14532d;
     padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 10px;
     position: sticky; top: 0; z-index: 50;
-    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    box-shadow: 0 2px 10px rgba(0,0,0,.4);
   }
   .icon-btn {
     background: none; border: none; color: #4ade80;
-    font-size: 20px; cursor: pointer; padding: 6px;
+    font-size: 20px; cursor: pointer; padding: 6px 8px;
     border-radius: 8px; text-decoration: none;
-    transition: background .15s;
+    transition: background .15s; line-height: 1;
   }
   .icon-btn:hover { background: rgba(74,222,128,.15); }
   header h1 { flex: 1; font-size: 18px; font-weight: 700; color: #4ade80; }
-  header .count { font-size: 13px; color: #86efac; }
 
   /* ── Search ── */
-  .search-bar {
-    padding: 12px 16px;
-    background: #166534;
-    border-bottom: 1px solid #15803d;
+  .search-wrap {
+    padding: 10px 14px 6px;
+    background: #14532d;
+    border-bottom: 1px solid #166534;
   }
-  .search-bar input {
-    width: 100%; padding: 10px 14px;
-    border-radius: 10px; border: 1px solid #15803d;
-    background: #14532d; color: #f0fdf4;
-    font-size: 15px; outline: none;
+  .search-wrap input {
+    width: 100%; padding: 9px 14px;
+    border-radius: 10px; border: 1px solid #166534;
+    background: #0a2e1a; color: #f0fdf4; font-size: 15px; outline: none;
   }
-  .search-bar input::placeholder { color: #86efac; }
-  .search-bar input:focus { border-color: #4ade80; }
+  .search-wrap input::placeholder { color: #4ade8088; }
+  .search-wrap input:focus { border-color: #4ade80; }
 
   /* ── Filters ── */
   .filters {
-    display: flex; gap: 8px; padding: 10px 16px;
-    overflow-x: auto; background: #166534;
-    border-bottom: 1px solid #15803d;
+    display: flex; gap: 6px; padding: 8px 14px;
+    overflow-x: auto; background: #14532d;
+    border-bottom: 1px solid #166534;
   }
   .filters::-webkit-scrollbar { display: none; }
-  .filter-btn {
-    padding: 5px 12px; border-radius: 20px; border: 1px solid #15803d;
-    background: none; color: #86efac; font-size: 13px; cursor: pointer;
-    white-space: nowrap; transition: all .15s;
+  .f-btn {
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid #166534;
+    background: none; color: #86efac; font-size: 12px;
+    cursor: pointer; white-space: nowrap; transition: all .15s;
   }
-  .filter-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .f-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
 
-  /* ── List ── */
-  .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  /* ── Stats bar ── */
+  .stats {
+    display: flex; gap: 0; background: #14532d;
+    border-bottom: 1px solid #166534;
+  }
+  .stat {
+    flex: 1; text-align: center; padding: 8px 4px;
+    border-right: 1px solid #166534; cursor: pointer;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num { font-size: 20px; font-weight: 800; color: #4ade80; }
+  .stat-lbl { font-size: 10px; color: #86efac; text-transform: uppercase; letter-spacing: .4px; }
+  .stat.active .stat-num { color: #fff; }
+  .stat.active { background: rgba(74,222,128,.1); }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+    padding-bottom: 90px;
+  }
 
   .card {
-    background: #166534;
+    background: #14532d;
     border-radius: 14px;
-    border: 1px solid #15803d;
-    padding: 14px;
-    display: flex; gap: 12px; align-items: flex-start;
-    cursor: pointer; transition: background .15s;
+    overflow: hidden;
+    border: 1px solid #166534;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+    position: relative;
   }
-  .card:hover { background: #15803d; }
+  .card:active { transform: scale(.97); }
 
-  .card-thumb {
-    width: 56px; height: 56px; border-radius: 8px;
-    background: #15803d; flex-shrink: 0;
-    overflow: hidden; display: flex; align-items: center;
-    justify-content: center; font-size: 28px;
+  .card-img {
+    width: 100%; aspect-ratio: 1;
+    background: #0a2e1a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; position: relative; overflow: hidden;
   }
-  .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
-
-  .card-body { flex: 1; min-width: 0; }
-  .card-ref { font-size: 11px; color: #86efac; margin-bottom: 2px; }
-  .card-nom { font-size: 15px; font-weight: 600; color: #f0fdf4; margin-bottom: 4px;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-desc { font-size: 12px; color: #86efac; white-space: nowrap;
-                overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
-  .card-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-  .etat-badge {
-    font-size: 11px; font-weight: 600; padding: 2px 8px;
-    border-radius: 20px; white-space: nowrap;
+  .card-img img {
+    width: 100%; height: 100%; object-fit: cover;
+    position: absolute; inset: 0;
   }
-  .etat-comme_neuf    { background: #dcfce7; color: #166534; }
-  .etat-tres_bon_etat { background: #d1fae5; color: #065f46; }
-  .etat-bon_etat      { background: #fef9c3; color: #713f12; }
-  .etat-mauvais_etat  { background: #fee2e2; color: #7f1d1d; }
 
-  .stock-badge {
-    font-size: 12px; font-weight: 700; color: #4ade80;
-    background: rgba(74,222,128,.12); padding: 2px 8px;
-    border-radius: 20px;
+  /* stock badge sur la photo */
+  .stock-pill {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    color: #4ade80; font-size: 13px; font-weight: 800;
+    padding: 2px 8px; border-radius: 20px;
   }
-  .stock-badge.zero { color: #f87171; background: rgba(248,113,113,.12); }
+  .stock-pill.zero { color: #f87171; }
 
-  .photos-count { font-size: 11px; color: #86efac; }
+  /* état pill */
+  .etat-pill {
+    position: absolute; bottom: 6px; left: 6px;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px;
+  }
+  .ep-comme_neuf    { background: #dcfce7cc; color: #14532d; }
+  .ep-tres_bon_etat { background: #d1fae5cc; color: #065f46; }
+  .ep-bon_etat      { background: #fef9c3cc; color: #713f12; }
+  .ep-mauvais_etat  { background: #fee2e2cc; color: #7f1d1d; }
+
+  .card-body { padding: 8px 10px 10px; }
+  .card-nom {
+    font-size: 13px; font-weight: 600; color: #f0fdf4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .card-ref { font-size: 10px; color: #86efac; }
 
   /* ── Empty / loading ── */
-  .empty {
-    text-align: center; padding: 60px 24px; color: #86efac;
-    display: none; flex-direction: column; align-items: center; gap: 12px;
-  }
-  .empty.show { display: flex; }
-  .empty .icon { font-size: 48px; }
-
-  .loading {
-    text-align: center; padding: 40px; color: #86efac;
+  .state-msg {
+    grid-column: 1 / -1;
+    text-align: center; padding: 60px 24px;
+    color: #4ade8066;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
+  .state-msg .ico { font-size: 48px; }
   .spinner {
-    width: 32px; height: 32px; border: 3px solid #15803d;
+    width: 32px; height: 32px; border: 3px solid #166534;
     border-top-color: #4ade80; border-radius: 50%;
     animation: spin .8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Detail modal ── */
-  .modal-bg {
+  /* ── FABs ── */
+  .fab-scan {
+    position: fixed; bottom: 24px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #16a34a; color: #fff; font-size: 24px;
+    border: none; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(22,163,74,.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 40; text-decoration: none; transition: transform .12s;
+  }
+  .fab-scan:active { transform: scale(.92); }
+  .fab-add {
+    position: fixed; bottom: 90px; right: 20px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #14532d; color: #4ade80; font-size: 24px;
+    border: 2px solid #4ade80; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 40; transition: transform .12s;
+  }
+  .fab-add:active { transform: scale(.92); }
+
+  /* ── Detail panel ── */
+  .panel-bg {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.6); z-index: 100;
     align-items: flex-end; justify-content: center;
   }
-  .modal-bg.open { display: flex; }
-  .modal {
-    background: #166534; border-radius: 20px 20px 0 0;
-    width: 100%; max-width: 500px;
-    max-height: 85vh; overflow-y: auto;
-    padding: 20px;
-    animation: slideUp .25s ease;
+  .panel-bg.open { display: flex; }
+  .panel {
+    background: #14532d; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px; max-height: 88vh;
+    overflow-y: auto; padding: 0 0 24px;
+    animation: slideUp .22s ease;
   }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-  .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .modal-header h2 { flex: 1; font-size: 18px; color: #4ade80; }
-  .modal-close {
-    background: none; border: none; color: #86efac; font-size: 22px;
-    cursor: pointer; padding: 4px;
+  .panel-photos {
+    width: 100%; aspect-ratio: 16/9;
+    background: #0a2e1a; position: relative;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px;
   }
-  .modal-ref { font-size: 12px; color: #86efac; margin-bottom: 12px; }
-
-  .modal-section { margin-bottom: 14px; }
-  .modal-label { font-size: 11px; color: #86efac; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
-  .modal-value { font-size: 15px; color: #f0fdf4; }
-
-  .modal-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .modal-photos img {
-    width: 80px; height: 80px; border-radius: 8px;
-    object-fit: cover; cursor: pointer; border: 2px solid #15803d;
+  .panel-photos img {
+    width: 100%; height: 100%; object-fit: cover;
+    cursor: pointer;
   }
-  .modal-photos img:hover { border-color: #4ade80; }
-
-  .modal-stock-row {
-    display: flex; gap: 12px; align-items: center;
-    background: #14532d; border-radius: 12px; padding: 14px;
-    margin-bottom: 14px;
+  .photos-nav {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px;
   }
-  .modal-stock-num { font-size: 32px; font-weight: 800; color: #4ade80; }
-  .modal-stock-label { font-size: 13px; color: #86efac; }
-
-  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-  .btn-sortie, .btn-entree {
-    flex: 1; padding: 14px; border-radius: 12px; border: none;
-    font-size: 16px; font-weight: 700; cursor: pointer;
-    transition: opacity .15s;
+  .photos-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,.4);
   }
-  .btn-sortie { background: #dc2626; color: #fff; }
-  .btn-entree { background: #16a34a; color: #fff; }
-  .btn-sortie:active, .btn-entree:active { opacity: .8; }
+  .photos-dot.active { background: #fff; }
+  .panel-close {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,.5); border: none; color: #fff;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .panel-info { padding: 14px 16px 0; }
+  .panel-nom { font-size: 20px; font-weight: 700; color: #f0fdf4; margin-bottom: 2px; }
+  .panel-ref { font-size: 12px; color: #86efac; margin-bottom: 10px; }
+
+  .panel-row {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 12px; flex-wrap: wrap;
+  }
+
+  .etat-badge {
+    font-size: 12px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .eb-comme_neuf    { background: #dcfce7; color: #14532d; }
+  .eb-tres_bon_etat { background: #d1fae5; color: #065f46; }
+  .eb-bon_etat      { background: #fef9c3; color: #713f12; }
+  .eb-mauvais_etat  { background: #fee2e2; color: #7f1d1d; }
+
+  .stock-big { font-size: 28px; font-weight: 800; color: #4ade80; }
+  .stock-big.zero { color: #f87171; }
+  .stock-lbl { font-size: 12px; color: #86efac; }
+
+  .panel-desc { font-size: 14px; color: #86efac; margin-bottom: 14px; padding: 0 16px; }
 
   .qty-row {
-    display: flex; align-items: center; gap: 12px;
-    justify-content: center; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 14px;
+    justify-content: center; padding: 0 16px; margin-bottom: 10px;
   }
   .qty-btn {
-    width: 40px; height: 40px; border-radius: 50%; border: 2px solid #4ade80;
-    background: none; color: #4ade80; font-size: 22px; cursor: pointer;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid #4ade80; background: none;
+    color: #4ade80; font-size: 24px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  #modalQty {
-    font-size: 28px; font-weight: 700; color: #f0fdf4;
-    width: 60px; text-align: center;
+  #pQty {
+    font-size: 30px; font-weight: 700; color: #f0fdf4;
+    width: 64px; text-align: center; border: none;
+    background: none; -moz-appearance: textfield;
+  }
+  #pQty::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  .action-row { display: flex; gap: 10px; padding: 0 16px; margin-bottom: 10px; }
+  .btn-sortie {
+    flex: 1; padding: 16px; border-radius: 12px; border: none;
+    background: #dc2626; color: #fff; font-size: 17px; font-weight: 800; cursor: pointer;
+  }
+  .btn-entree {
+    flex: 1; padding: 16px; border-radius: 12px; border: none;
+    background: #16a34a; color: #fff; font-size: 17px; font-weight: 800; cursor: pointer;
+  }
+  .btn-sortie:active { opacity: .8; }
+  .btn-entree:active { opacity: .8; }
+
+  .panel-secondary { display: flex; gap: 8px; padding: 0 16px; }
+  .btn-sec {
+    flex: 1; padding: 10px; border-radius: 10px;
+    border: 1px solid #166534; background: none;
+    color: #86efac; font-size: 12px; cursor: pointer;
+  }
+  .btn-sec:active { background: #166534; }
+
+  /* ── Add modal ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.6); z-index: 110;
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #14532d; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px; max-height: 90vh;
+    overflow-y: auto; padding: 20px;
+    animation: slideUp .22s ease;
+  }
+  .modal-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .modal-hdr h2 { flex: 1; font-size: 18px; color: #4ade80; }
+  .modal-close { background: none; border: none; color: #86efac; font-size: 22px; cursor: pointer; }
+  .fg { margin-bottom: 12px; }
+  .fg label { display: block; font-size: 12px; color: #86efac; margin-bottom: 4px; }
+  .fg input, .fg select, .fg textarea {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid #166534; background: #0a2e1a;
+    color: #f0fdf4; font-size: 15px; outline: none;
+  }
+  .fg input:focus, .fg select:focus, .fg textarea:focus { border-color: #4ade80; }
+  .fg textarea { min-height: 68px; resize: vertical; }
+  .fg select option { background: #0a2e1a; }
+  .ref-hint { font-size: 11px; color: #4ade80; margin-top: 3px; }
+  .btn-create {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: #16a34a; color: #fff; font-size: 16px;
+    font-weight: 700; cursor: pointer; margin-top: 4px;
   }
 
   /* ── Lightbox ── */
   .lightbox {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.9); z-index: 200;
+    background: rgba(0,0,0,.92); z-index: 200;
     align-items: center; justify-content: center;
   }
   .lightbox.open { display: flex; }
-  .lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 12px; }
-  .lightbox-close {
-    position: absolute; top: 16px; right: 16px;
-    color: #fff; font-size: 32px; cursor: pointer;
-    background: rgba(0,0,0,.5); border: none;
-    width: 44px; height: 44px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+  .lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
+  .lb-close {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(255,255,255,.15); border: none; color: #fff;
+    font-size: 20px; width: 40px; height: 40px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
 
-  /* ── FAB ── */
-  .fab {
-    position: fixed; bottom: 24px; right: 20px;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: #16a34a; color: #fff; font-size: 28px;
-    border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 40; transition: transform .15s;
-  }
-  .fab:active { transform: scale(.92); }
-
-  .fab-scanner {
-    position: fixed; bottom: 90px; right: 20px;
-    width: 48px; height: 48px; border-radius: 50%;
-    background: #15803d; color: #4ade80; font-size: 22px;
-    border: 2px solid #4ade80; cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0,0,0,.25);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 40; transition: transform .15s;
-    text-decoration: none;
-  }
-  .fab-scanner:active { transform: scale(.92); }
-
-  /* ── Add modal ── */
-  .add-modal-bg {
+  /* ── Etat modal ── */
+  .etat-bg {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.6); z-index: 100;
+    background: rgba(0,0,0,.6); z-index: 120;
     align-items: flex-end; justify-content: center;
   }
-  .add-modal-bg.open { display: flex; }
-  .add-modal {
-    background: #166534; border-radius: 20px 20px 0 0;
-    width: 100%; max-width: 500px;
-    max-height: 90vh; overflow-y: auto;
-    padding: 20px;
-    animation: slideUp .25s ease;
+  .etat-bg.open { display: flex; }
+  .etat-modal {
+    background: #14532d; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px; padding: 20px;
+    animation: slideUp .22s ease;
   }
-  .form-group { margin-bottom: 14px; }
-  .form-group label { display: block; font-size: 13px; color: #86efac; margin-bottom: 5px; }
-  .form-group input, .form-group select, .form-group textarea {
-    width: 100%; padding: 10px 12px; border-radius: 10px;
-    border: 1px solid #15803d; background: #14532d;
-    color: #f0fdf4; font-size: 15px; outline: none;
-  }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    border-color: #4ade80;
-  }
-  .form-group textarea { min-height: 72px; resize: vertical; }
-  .form-group select option { background: #14532d; }
-  .ref-preview { font-size: 11px; color: #4ade80; margin-top: 4px; }
-  .btn-submit {
-    width: 100%; padding: 14px; border-radius: 12px;
-    border: none; background: #16a34a; color: #fff;
-    font-size: 16px; font-weight: 700; cursor: pointer;
-    margin-top: 6px;
-  }
-  .btn-submit:active { opacity: .85; }
 
-  /* ── Employee prompt ── */
-  .emp-bar {
-    padding: 8px 16px; background: #15803d;
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: #86efac;
+  /* ── Flash ── */
+  .flash {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: #166534; color: #4ade80; padding: 10px 20px;
+    border-radius: 10px; font-weight: 600; font-size: 14px;
+    z-index: 300; display: none; white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
   }
-  .emp-name { color: #4ade80; font-weight: 600; cursor: pointer; text-decoration: underline dotted; }
+  .flash.error { background: #7f1d1d; color: #fca5a5; }
+  .flash.show { display: block; }
 </style>
 </head>
 <body>
 
 <header>
-  <a class="icon-btn" href="gollect.html" title="Scanner">◀</a>
+  <a class="icon-btn" href="index.html" title="Stock principal">◀</a>
   <h1>♻️ Gollect</h1>
-  <span class="count" id="countLabel">— articles</span>
-  <a class="icon-btn" href="index.html" title="Stock principal">📦</a>
+  <a class="icon-btn" href="CONFIG_SHEET_URL" id="sheetBtn" title="Google Sheet" target="_blank">📊</a>
 </header>
 
-<div class="emp-bar">
-  Employé : <span class="emp-name" id="empDisplay" onclick="changeEmp()">—</span>
+<div class="search-wrap">
+  <input type="search" id="searchInput" placeholder="🔍  Rechercher…" oninput="render()">
 </div>
 
-<div class="search-bar">
-  <input type="search" id="searchInput" placeholder="Rechercher un article Gollect..." oninput="filterItems()">
+<div class="filters" id="filtersBar">
+  <button class="f-btn active" data-etat="all" onclick="setFilter(this)">Tous</button>
+  <button class="f-btn" data-etat="comme_neuf" onclick="setFilter(this)">✨ Comme neuf</button>
+  <button class="f-btn" data-etat="tres_bon_etat" onclick="setFilter(this)">👍 Très bon état</button>
+  <button class="f-btn" data-etat="bon_etat" onclick="setFilter(this)">✅ Bon état</button>
+  <button class="f-btn" data-etat="mauvais_etat" onclick="setFilter(this)">⚠️ Mauvais état</button>
 </div>
 
-<div class="filters" id="filters">
-  <button class="filter-btn active" data-etat="all" onclick="setFilter(this)">Tous</button>
-  <button class="filter-btn" data-etat="comme_neuf" onclick="setFilter(this)">Comme neuf</button>
-  <button class="filter-btn" data-etat="tres_bon_etat" onclick="setFilter(this)">Très bon état</button>
-  <button class="filter-btn" data-etat="bon_etat" onclick="setFilter(this)">Bon état</button>
-  <button class="filter-btn" data-etat="mauvais_etat" onclick="setFilter(this)">Mauvais état</button>
-</div>
-
-<div class="list" id="list">
-  <div class="loading">
-    <div class="spinner"></div>
-    <span>Chargement…</span>
+<div class="stats" id="statsBar">
+  <div class="stat" onclick="setStatFilter('all')" id="stat-all">
+    <div class="stat-num" id="sTotal">—</div>
+    <div class="stat-lbl">Total</div>
+  </div>
+  <div class="stat" onclick="setStatFilter('comme_neuf')" id="stat-comme_neuf">
+    <div class="stat-num" id="sNeuf">0</div>
+    <div class="stat-lbl">Comme neuf</div>
+  </div>
+  <div class="stat" onclick="setStatFilter('bon_etat')" id="stat-bon_etat">
+    <div class="stat-num" id="sBon">0</div>
+    <div class="stat-lbl">Bon état</div>
+  </div>
+  <div class="stat" onclick="setStatFilter('mauvais_etat')" id="stat-mauvais_etat">
+    <div class="stat-num" id="sMauvais">0</div>
+    <div class="stat-lbl">À revoir</div>
   </div>
 </div>
 
-<div class="empty" id="empty">
-  <span class="icon">♻️</span>
-  <strong>Aucun article Gollect</strong>
-  <span>Appuyez sur + pour en ajouter un</span>
+<div class="grid" id="grid">
+  <div class="state-msg"><div class="spinner"></div><span>Chargement…</span></div>
 </div>
 
 <!-- FABs -->
-<a class="fab-scanner" href="gollect.html" title="Scanner">📷</a>
-<button class="fab" onclick="openAdd()" title="Ajouter un article">＋</button>
+<a class="fab-scan" href="gollect.html" title="Scanner">📷</a>
+<button class="fab-add" onclick="openAdd()" title="Ajouter">＋</button>
 
-<!-- Detail modal -->
-<div class="modal-bg" id="detailBg" onclick="closeDetail(event)">
-  <div class="modal" id="detailModal">
-    <div class="modal-header">
-      <h2 id="dNom">—</h2>
-      <button class="modal-close" onclick="closeDetailForce()">✕</button>
+<!-- Detail panel -->
+<div class="panel-bg" id="panelBg" onclick="closePanelBg(event)">
+  <div class="panel">
+    <div class="panel-photos" id="pPhotos">
+      <span id="pEmoji">♻️</span>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+      <div class="photos-nav" id="pDots"></div>
     </div>
-    <div class="modal-ref" id="dRef">—</div>
-
-    <div class="modal-stock-row">
-      <div>
-        <div class="modal-stock-num" id="dStock">0</div>
-        <div class="modal-stock-label">en stock</div>
+    <div class="panel-info">
+      <div class="panel-nom" id="pNom">—</div>
+      <div class="panel-ref" id="pRef">—</div>
+      <div class="panel-row">
+        <span class="etat-badge" id="pEtat">—</span>
+        <div>
+          <span class="stock-big" id="pStock">0</span>
+          <span class="stock-lbl"> ex. en stock</span>
+        </div>
       </div>
     </div>
-
-    <div class="modal-section">
-      <div class="modal-label">État</div>
-      <span class="etat-badge" id="dEtatBadge">—</span>
-    </div>
-
-    <div class="modal-section" id="dDescSection">
-      <div class="modal-label">Description</div>
-      <div class="modal-value" id="dDesc">—</div>
-    </div>
-
-    <div class="modal-section" id="dPhotosSection">
-      <div class="modal-label">Photos</div>
-      <div class="modal-photos" id="dPhotos"></div>
-    </div>
-
+    <div class="panel-desc" id="pDesc"></div>
     <div class="qty-row">
-      <button class="qty-btn" onclick="changeQty(-1)">−</button>
-      <input id="modalQty" type="number" value="1" min="1" max="999">
-      <button class="qty-btn" onclick="changeQty(1)">＋</button>
+      <button class="qty-btn" onclick="chgQty(-1)">−</button>
+      <input id="pQty" type="number" value="1" min="1">
+      <button class="qty-btn" onclick="chgQty(1)">＋</button>
     </div>
-
-    <div class="modal-actions">
-      <button class="btn-sortie" onclick="doMovement('sortie')">SORTIE</button>
-      <button class="btn-entree" onclick="doMovement('entree')">ENTRÉE</button>
+    <div class="action-row">
+      <button class="btn-sortie" onclick="doMove('sortie')">↓ SORTIE</button>
+      <button class="btn-entree" onclick="doMove('entree')">↑ ENTRÉE</button>
     </div>
-
-    <div style="margin-top:14px; display:flex; gap:8px;">
-      <button onclick="openEtatEdit()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #15803d;background:none;color:#86efac;font-size:13px;cursor:pointer;">
-        ✏️ Modifier état
-      </button>
+    <div class="panel-secondary">
+      <button class="btn-sec" onclick="openEtat()">✏️ Modifier état</button>
+      <button class="btn-sec" onclick="addPhotoFromPanel()">📷 Ajouter photo</button>
     </div>
+    <input type="file" accept="image/*" capture="environment" id="panelPhotoInput" style="display:none" onchange="uploadPanelPhoto(this)">
   </div>
 </div>
 
 <!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightboxImg" src="" alt="">
+<div class="lightbox" id="lightbox" onclick="closeLB()">
+  <button class="lb-close" onclick="closeLB()">✕</button>
+  <img id="lbImg" src="" alt="">
 </div>
 
 <!-- Add modal -->
-<div class="add-modal-bg" id="addBg" onclick="closeAdd(event)">
-  <div class="add-modal">
-    <div class="modal-header">
+<div class="modal-bg" id="addBg" onclick="closeAddBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
       <h2>Nouvel article Gollect</h2>
-      <button class="modal-close" onclick="closeAddForce()">✕</button>
+      <button class="modal-close" onclick="closeAdd()">✕</button>
     </div>
-
-    <div class="form-group">
+    <div class="fg">
       <label>Nom *</label>
-      <input id="addNom" placeholder="ex. Présentoir acrylique A4" oninput="updateRefPreview()">
-      <div class="ref-preview" id="refPreview"></div>
+      <input id="aNom" placeholder="ex. Présentoir acrylique A4" oninput="updateRef()">
+      <div class="ref-hint" id="aRef"></div>
     </div>
-    <div class="form-group">
+    <div class="fg">
       <label>Description</label>
-      <textarea id="addDesc" placeholder="Dimensions, couleur, matière…"></textarea>
+      <textarea id="aDesc" placeholder="Dimensions, couleur, matière…"></textarea>
     </div>
-    <div class="form-group">
-      <label>État initial</label>
-      <select id="addEtat">
+    <div class="fg">
+      <label>État</label>
+      <select id="aEtat">
         <option value="comme_neuf">✨ Comme neuf</option>
         <option value="tres_bon_etat">👍 Très bon état</option>
         <option value="bon_etat" selected>✅ Bon état</option>
         <option value="mauvais_etat">⚠️ Mauvais état</option>
       </select>
     </div>
-    <div class="form-group">
+    <div class="fg">
       <label>Quantité initiale</label>
-      <input id="addStock" type="number" value="1" min="0">
+      <input id="aStock" type="number" value="1" min="0">
     </div>
-    <div class="form-group">
+    <div class="fg">
       <label>Photo (optionnel)</label>
-      <input id="addPhoto" type="file" accept="image/*" capture="environment" style="color:#86efac">
+      <input id="aPhoto" type="file" accept="image/*" capture="environment" style="color:#86efac">
     </div>
-
-    <button class="btn-submit" onclick="submitAdd()">Ajouter</button>
+    <button class="btn-create" onclick="submitAdd()">Créer</button>
   </div>
 </div>
 
-<!-- Etat edit modal -->
-<div class="modal-bg" id="etatBg" onclick="closeEtat(event)">
-  <div class="modal" style="max-height:60vh;">
-    <div class="modal-header">
+<!-- Etat modal -->
+<div class="etat-bg" id="etatBg" onclick="closeEtatBg(event)">
+  <div class="etat-modal">
+    <div class="modal-hdr">
       <h2>Modifier l'état</h2>
-      <button class="modal-close" onclick="closeEtatForce()">✕</button>
+      <button class="modal-close" onclick="closeEtat()">✕</button>
     </div>
-    <div class="form-group">
+    <div class="fg">
       <label>État</label>
-      <select id="etatSelect">
+      <select id="etatSel">
         <option value="comme_neuf">✨ Comme neuf</option>
         <option value="tres_bon_etat">👍 Très bon état</option>
         <option value="bon_etat">✅ Bon état</option>
         <option value="mauvais_etat">⚠️ Mauvais état</option>
       </select>
     </div>
-    <div class="form-group">
+    <div class="fg">
       <label>Description</label>
-      <textarea id="etatDesc" placeholder="Mise à jour de la description…"></textarea>
+      <textarea id="etatDesc" placeholder="Notes sur l'état…"></textarea>
     </div>
-    <button class="btn-submit" onclick="submitEtat()">Enregistrer</button>
+    <button class="btn-create" onclick="submitEtat()">Enregistrer</button>
   </div>
 </div>
+
+<div class="flash" id="flash"></div>
 
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script>
-let allItems = [];
+let items = [];
 let currentItem = null;
 let currentFilter = 'all';
+let panelPhotos = [];
+let panelPhotoIdx = 0;
 
-const ETAT_LABELS = {
+const ETAT_L = {
   comme_neuf:    '✨ Comme neuf',
   tres_bon_etat: '👍 Très bon état',
   bon_etat:      '✅ Bon état',
   mauvais_etat:  '⚠️ Mauvais état',
 };
 
-// ── Employee ──
-function getEmp() { return localStorage.getItem('gollect_emp') || localStorage.getItem('employe') || 'Anonyme'; }
-function setEmp(v) { localStorage.setItem('gollect_emp', v); localStorage.setItem('employe', v); }
-function changeEmp() {
-  const v = prompt('Votre nom :', getEmp());
-  if (v && v.trim()) { setEmp(v.trim()); document.getElementById('empDisplay').textContent = v.trim(); }
+// Lien Google Sheet
+document.getElementById('sheetBtn').href = CONFIG.SHEET_URL;
+
+// ── Flash ──
+let flashT;
+function flash(msg, type = 'ok') {
+  const el = document.getElementById('flash');
+  el.textContent = msg;
+  el.className = 'flash show' + (type === 'error' ? ' error' : '');
+  clearTimeout(flashT);
+  flashT = setTimeout(() => el.classList.remove('show'), 2800);
 }
-document.getElementById('empDisplay').textContent = getEmp();
 
 // ── Load ──
 async function load() {
   try {
-    allItems = await API.listGollect();
-    if (!Array.isArray(allItems)) allItems = [];
-  } catch { allItems = []; }
-  renderList();
+    const data = await API.listGollect();
+    items = Array.isArray(data) ? data : [];
+  } catch { items = []; }
+  updateStats();
+  render();
 }
 
-// ── Render ──
-function renderList() {
+// ── Stats ──
+function updateStats() {
+  document.getElementById('sTotal').textContent = items.length;
+  document.getElementById('sNeuf').textContent =
+    items.filter(i => i.etat === 'comme_neuf' || i.etat === 'tres_bon_etat').length;
+  document.getElementById('sBon').textContent =
+    items.filter(i => i.etat === 'bon_etat').length;
+  document.getElementById('sMauvais').textContent =
+    items.filter(i => i.etat === 'mauvais_etat').length;
+}
+
+// ── Render grid ──
+function render() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
-  const filtered = allItems.filter(it => {
-    const matchEtat = currentFilter === 'all' || it.etat === currentFilter;
-    const matchSearch = !q || it.nom?.toLowerCase().includes(q) || it.ref?.toLowerCase().includes(q) || it.description?.toLowerCase().includes(q);
-    return matchEtat && matchSearch;
+  const filtered = items.filter(it => {
+    const etatOk = currentFilter === 'all'
+      || it.etat === currentFilter
+      || (currentFilter === 'bon_etat' && !it.etat);
+    const searchOk = !q
+      || (it.nom || '').toLowerCase().includes(q)
+      || (it.ref || '').toLowerCase().includes(q)
+      || (it.description || '').toLowerCase().includes(q);
+    return etatOk && searchOk;
   });
 
-  document.getElementById('countLabel').textContent = `${filtered.length} article${filtered.length !== 1 ? 's' : ''}`;
-
-  const list = document.getElementById('list');
-  const empty = document.getElementById('empty');
+  const grid = document.getElementById('grid');
 
   if (!filtered.length) {
-    list.innerHTML = '';
-    empty.classList.add('show');
+    grid.innerHTML = `<div class="state-msg"><span class="ico">♻️</span><span>${items.length ? 'Aucun résultat' : 'Aucun article — appuyez sur +'}</span></div>`;
     return;
   }
-  empty.classList.remove('show');
 
-  const photos = it => (it.photos || '').split(',').filter(Boolean);
-
-  list.innerHTML = filtered.map(it => {
-    const ps = photos(it);
-    const thumb = ps.length ? `<img src="${ps[0]}" loading="lazy">` : '<span>♻️</span>';
+  grid.innerHTML = filtered.map(it => {
+    const photos = (it.photos || '').split(',').filter(Boolean);
     const stock = parseInt(it.stock_actuel) || 0;
-    return `
-    <div class="card" onclick="openDetail('${it.ref}')">
-      <div class="card-thumb">${thumb}</div>
+    const imgHtml = photos.length
+      ? `<img src="${photos[0]}" loading="lazy" alt="">`
+      : '';
+    const emoji = photos.length ? '' : '♻️';
+
+    return `<div class="card" onclick="openPanel('${it.ref}')">
+      <div class="card-img">
+        ${emoji ? `<span>${emoji}</span>` : ''}
+        ${imgHtml}
+        <span class="stock-pill ${stock === 0 ? 'zero' : ''}">${stock}</span>
+        <span class="etat-pill ep-${it.etat || 'bon_etat'}">${ETAT_L[it.etat] || '✅'}</span>
+      </div>
       <div class="card-body">
-        <div class="card-ref">${it.ref}</div>
         <div class="card-nom">${it.nom || '—'}</div>
-        ${it.description ? `<div class="card-desc">${it.description}</div>` : ''}
-        <div class="card-foot">
-          <span class="etat-badge etat-${it.etat || 'bon_etat'}">${ETAT_LABELS[it.etat] || it.etat || '—'}</span>
-          <span class="stock-badge ${stock === 0 ? 'zero' : ''}">${stock} ex.</span>
-          ${ps.length > 0 ? `<span class="photos-count">📷 ${ps.length}</span>` : ''}
-        </div>
+        <div class="card-ref">${it.ref}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-function filterItems() { renderList(); }
 function setFilter(btn) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentFilter = btn.dataset.etat;
-  renderList();
+  render();
 }
 
-// ── Detail modal ──
-function openDetail(ref) {
-  currentItem = allItems.find(it => it.ref === ref);
+function setStatFilter(etat) {
+  currentFilter = etat;
+  document.querySelectorAll('.f-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.etat === etat);
+  });
+  render();
+}
+
+// ── Panel ──
+function openPanel(ref) {
+  currentItem = items.find(i => i.ref === ref);
   if (!currentItem) return;
   const it = currentItem;
 
-  document.getElementById('dNom').textContent = it.nom || '—';
-  document.getElementById('dRef').textContent = it.ref;
-  document.getElementById('dStock').textContent = parseInt(it.stock_actuel) || 0;
+  document.getElementById('pNom').textContent = it.nom || '—';
+  document.getElementById('pRef').textContent = it.ref;
 
-  const badge = document.getElementById('dEtatBadge');
-  badge.textContent = ETAT_LABELS[it.etat] || it.etat || '—';
-  badge.className = `etat-badge etat-${it.etat || 'bon_etat'}`;
+  const stock = parseInt(it.stock_actuel) || 0;
+  const stockEl = document.getElementById('pStock');
+  stockEl.textContent = stock;
+  stockEl.className = 'stock-big' + (stock === 0 ? ' zero' : '');
 
-  const descSec = document.getElementById('dDescSection');
-  if (it.description) {
-    descSec.style.display = '';
-    document.getElementById('dDesc').textContent = it.description;
-  } else { descSec.style.display = 'none'; }
+  const etatEl = document.getElementById('pEtat');
+  etatEl.textContent = ETAT_L[it.etat] || '—';
+  etatEl.className = `etat-badge eb-${it.etat || 'bon_etat'}`;
 
-  const photos = (it.photos || '').split(',').filter(Boolean);
-  const photosSec = document.getElementById('dPhotosSection');
-  if (photos.length) {
-    photosSec.style.display = '';
-    document.getElementById('dPhotos').innerHTML = photos.map(u =>
-      `<img src="${u}" onclick="openLightbox('${u}')">`
-    ).join('');
-  } else { photosSec.style.display = 'none'; }
+  const descEl = document.getElementById('pDesc');
+  descEl.textContent = it.description || '';
+  descEl.style.display = it.description ? '' : 'none';
 
-  document.getElementById('modalQty').value = 1;
-  document.getElementById('detailBg').classList.add('open');
+  // Photos
+  panelPhotos = (it.photos || '').split(',').filter(Boolean);
+  panelPhotoIdx = 0;
+  renderPanelPhoto();
+
+  document.getElementById('pQty').value = 1;
+  document.getElementById('panelBg').classList.add('open');
 }
-function closeDetail(e) { if (e.target === document.getElementById('detailBg')) closeDetailForce(); }
-function closeDetailForce() { document.getElementById('detailBg').classList.remove('open'); }
 
-// ── Qty ──
-function changeQty(d) {
-  const el = document.getElementById('modalQty');
+function renderPanelPhoto() {
+  const container = document.getElementById('pPhotos');
+  const emoji = document.getElementById('pEmoji');
+  const dots = document.getElementById('pDots');
+
+  if (panelPhotos.length) {
+    emoji.style.display = 'none';
+    // remove old img
+    container.querySelectorAll('img').forEach(e => e.remove());
+    const img = document.createElement('img');
+    img.src = panelPhotos[panelPhotoIdx];
+    img.onclick = () => openLB(panelPhotos[panelPhotoIdx]);
+    container.insertBefore(img, container.querySelector('.panel-close'));
+
+    dots.innerHTML = panelPhotos.map((_, i) =>
+      `<div class="photos-dot ${i === panelPhotoIdx ? 'active' : ''}" onclick="setPhoto(${i})"></div>`
+    ).join('');
+  } else {
+    emoji.style.display = '';
+    container.querySelectorAll('img').forEach(e => e.remove());
+    dots.innerHTML = '';
+  }
+}
+
+function setPhoto(i) {
+  panelPhotoIdx = i;
+  renderPanelPhoto();
+}
+
+function closePanel() { document.getElementById('panelBg').classList.remove('open'); }
+function closePanelBg(e) { if (e.target === document.getElementById('panelBg')) closePanel(); }
+
+// ── Qty / movement ──
+function chgQty(d) {
+  const el = document.getElementById('pQty');
   el.value = Math.max(1, (parseInt(el.value) || 1) + d);
 }
 
-// ── Movement ──
-async function doMovement(type) {
+async function doMove(type) {
   if (!currentItem) return;
-  const qty = parseInt(document.getElementById('modalQty').value) || 1;
-  const emp = getEmp();
-
+  const qty = parseInt(document.getElementById('pQty').value) || 1;
+  const emp = localStorage.getItem('employe') || 'Anonyme';
   const btn = type === 'sortie'
     ? document.querySelector('.btn-sortie')
     : document.querySelector('.btn-entree');
   btn.disabled = true;
-  btn.textContent = '…';
 
   try {
     const res = await API.gollectMovement(currentItem.ref, type, qty, emp);
     if (res.success) {
       if (navigator.vibrate) navigator.vibrate(60);
       currentItem.stock_actuel = res.stock_actuel;
-      document.getElementById('dStock').textContent = res.stock_actuel;
-      // update in allItems
-      const idx = allItems.findIndex(i => i.ref === currentItem.ref);
-      if (idx >= 0) allItems[idx].stock_actuel = res.stock_actuel;
-      renderList();
-      setTimeout(closeDetailForce, 600);
-    } else {
-      alert(res.error || 'Erreur');
-    }
-  } catch { alert('Erreur réseau'); }
-
+      const idx = items.findIndex(i => i.ref === currentItem.ref);
+      if (idx >= 0) items[idx].stock_actuel = res.stock_actuel;
+      document.getElementById('pStock').textContent = res.stock_actuel;
+      updateStats();
+      render();
+      flash(type === 'sortie' ? `−${qty} sorti` : `+${qty} entré`, 'ok');
+      setTimeout(closePanel, 700);
+    } else { flash(res.error || 'Erreur', 'error'); }
+  } catch { flash('Erreur réseau', 'error'); }
   btn.disabled = false;
-  btn.textContent = type === 'sortie' ? 'SORTIE' : 'ENTRÉE';
 }
 
-// ── Etat edit ──
-function openEtatEdit() {
+// ── Photo from panel ──
+function addPhotoFromPanel() {
+  document.getElementById('panelPhotoInput').click();
+}
+
+function uploadPanelPhoto(input) {
+  if (!input.files[0] || !currentItem) return;
+  const ref = currentItem.ref;
+  flash('Upload en cours…');
+  resizeFile(input.files[0], 400, 0.4, base64 => {
+    API.addGollectPhoto(ref, base64)
+      .then(res => {
+        if (res.success) {
+          flash('Photo ajoutée ✓');
+          const idx = items.findIndex(i => i.ref === ref);
+          if (idx >= 0) {
+            const existing = items[idx].photos ? items[idx].photos + ',' : '';
+            items[idx].photos = existing + res.url;
+            currentItem.photos = items[idx].photos;
+            panelPhotos = items[idx].photos.split(',').filter(Boolean);
+            panelPhotoIdx = panelPhotos.length - 1;
+            renderPanelPhoto();
+            render();
+          }
+        } else { flash(res.error || 'Erreur photo', 'error'); }
+      })
+      .catch(() => flash('Échec upload photo', 'error'));
+  });
+}
+
+// ── Etat ──
+function openEtat() {
   if (!currentItem) return;
-  document.getElementById('etatSelect').value = currentItem.etat || 'bon_etat';
+  document.getElementById('etatSel').value = currentItem.etat || 'bon_etat';
   document.getElementById('etatDesc').value = currentItem.description || '';
   document.getElementById('etatBg').classList.add('open');
 }
-function closeEtat(e) { if (e.target === document.getElementById('etatBg')) closeEtatForce(); }
-function closeEtatForce() { document.getElementById('etatBg').classList.remove('open'); }
+function closeEtat() { document.getElementById('etatBg').classList.remove('open'); }
+function closeEtatBg(e) { if (e.target === document.getElementById('etatBg')) closeEtat(); }
 
 async function submitEtat() {
   if (!currentItem) return;
-  const etat = document.getElementById('etatSelect').value;
+  const etat = document.getElementById('etatSel').value;
   const desc = document.getElementById('etatDesc').value.trim();
   try {
     const res = await API.updateGollectEtat(currentItem.ref, etat, desc);
     if (res.success) {
       currentItem.etat = etat;
       currentItem.description = desc;
-      const idx = allItems.findIndex(i => i.ref === currentItem.ref);
-      if (idx >= 0) { allItems[idx].etat = etat; allItems[idx].description = desc; }
-      closeEtatForce();
-      openDetail(currentItem.ref);
-      renderList();
-    } else { alert(res.error || 'Erreur'); }
-  } catch { alert('Erreur réseau'); }
+      const idx = items.findIndex(i => i.ref === currentItem.ref);
+      if (idx >= 0) { items[idx].etat = etat; items[idx].description = desc; }
+      closeEtat();
+      openPanel(currentItem.ref);
+      updateStats();
+      render();
+      flash('État mis à jour ✓');
+    } else { flash(res.error || 'Erreur', 'error'); }
+  } catch { flash('Erreur réseau', 'error'); }
 }
-
-// ── Lightbox ──
-function openLightbox(url) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightbox').classList.add('open');
-}
-function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
 // ── Add ──
 function genRef(nom) {
-  if (!nom) return '';
-  const compact = nom.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-  return `GOL-${compact}`;
+  return 'GOL-' + nom.toUpperCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, '').slice(0, 8);
 }
-function updateRefPreview() {
-  const nom = document.getElementById('addNom').value.trim();
-  document.getElementById('refPreview').textContent = nom ? `Réf : ${genRef(nom)}` : '';
+function updateRef() {
+  const nom = document.getElementById('aNom').value.trim();
+  document.getElementById('aRef').textContent = nom ? `Réf : ${genRef(nom)}` : '';
 }
 function openAdd() { document.getElementById('addBg').classList.add('open'); }
-function closeAdd(e) { if (e.target === document.getElementById('addBg')) closeAddForce(); }
-function closeAddForce() { document.getElementById('addBg').classList.remove('open'); }
+function closeAdd() { document.getElementById('addBg').classList.remove('open'); }
+function closeAddBg(e) { if (e.target === document.getElementById('addBg')) closeAdd(); }
 
-function resizeImage(file, maxPx, cb) {
+async function submitAdd() {
+  const nom = document.getElementById('aNom').value.trim();
+  if (!nom) { flash('Le nom est obligatoire', 'error'); return; }
+
+  const ref = genRef(nom);
+  const desc = document.getElementById('aDesc').value.trim();
+  const etat = document.getElementById('aEtat').value;
+  const stock = parseInt(document.getElementById('aStock').value) || 0;
+  const photoFile = document.getElementById('aPhoto').files[0];
+
+  const btn = document.querySelector('#addBg .btn-create');
+  btn.disabled = true; btn.textContent = 'Création…';
+
+  try {
+    const res = await API.addGollectItem({ ref, nom, description: desc, etat, stock_actuel: stock });
+    if (!res.success) { flash(res.error || 'Erreur', 'error'); btn.disabled = false; btn.textContent = 'Créer'; return; }
+
+    closeAdd();
+    document.getElementById('aNom').value = '';
+    document.getElementById('aDesc').value = '';
+    document.getElementById('aStock').value = '1';
+    document.getElementById('aPhoto').value = '';
+    updateRef();
+    flash(`"${nom}" créé ✓`);
+    await load();
+
+    // Photo en arrière-plan
+    if (photoFile) {
+      resizeFile(photoFile, 400, 0.4, base64 => {
+        API.addGollectPhoto(ref, base64)
+          .then(res => {
+            if (res.success) {
+              flash('Photo ajoutée ✓');
+              const idx = items.findIndex(i => i.ref === ref);
+              if (idx >= 0) { items[idx].photos = res.url; render(); }
+            } else {
+              flash('Article créé, mais photo non envoyée ⚠️', 'error');
+            }
+          })
+          .catch(() => flash('Article créé, mais photo non envoyée ⚠️', 'error'));
+      });
+    }
+  } catch { flash('Erreur réseau', 'error'); }
+
+  btn.disabled = false; btn.textContent = 'Créer';
+}
+
+// ── Lightbox ──
+function openLB(url) {
+  document.getElementById('lbImg').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLB() { document.getElementById('lightbox').classList.remove('open'); }
+
+// ── Image resize ──
+function resizeFile(file, maxPx, quality, cb) {
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
       const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      cb(canvas.toDataURL('image/jpeg', .4));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      cb(c.toDataURL('image/jpeg', quality));
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-}
-
-async function submitAdd() {
-  const nom = document.getElementById('addNom').value.trim();
-  if (!nom) { alert('Le nom est obligatoire'); return; }
-
-  const ref = genRef(nom);
-  const desc = document.getElementById('addDesc').value.trim();
-  const etat = document.getElementById('addEtat').value;
-  const stock = parseInt(document.getElementById('addStock').value) || 0;
-  const photoFile = document.getElementById('addPhoto').files[0];
-
-  const btn = document.querySelector('#addBg .btn-submit');
-  btn.disabled = true; btn.textContent = 'Enregistrement…';
-
-  try {
-    const res = await API.addGollectItem({ ref, nom, description: desc, etat, stock_actuel: stock });
-    if (!res.success) { alert(res.error || 'Erreur'); btn.disabled = false; btn.textContent = 'Ajouter'; return; }
-
-    closeAddForce();
-    document.getElementById('addNom').value = '';
-    document.getElementById('addDesc').value = '';
-    document.getElementById('addStock').value = '1';
-    document.getElementById('addPhoto').value = '';
-    updateRefPreview();
-    await load();
-
-    // Upload photo en arrière-plan (non-bloquant)
-    if (photoFile) {
-      resizeImage(photoFile, 400, base64 => {
-        API.addGollectPhoto(ref, base64).catch(() => {});
-      });
-    }
-  } catch { alert('Erreur réseau'); }
-
-  btn.disabled = false; btn.textContent = 'Ajouter';
 }
 
 load();
