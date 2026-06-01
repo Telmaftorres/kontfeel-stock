@@ -377,7 +377,7 @@
     if (!input.files[0] || !currentItem) return;
     showFlash('Upload en cours…', 'success');
     const base64 = await fileToBase64(input.files[0]);
-    const resized = await resizeImage(base64, 1200);
+    const resized = await resizeImage(base64, 600);
     try {
       const res = await API.addGollectPhoto(currentItem.ref, resized);
       if (res.error) throw new Error();
@@ -446,7 +446,7 @@
 
       // Upload photo si présente
       if (modalPhotoBase64) {
-        const resized = await resizeImage(modalPhotoBase64, 1200);
+        const resized = await resizeImage(modalPhotoBase64, 600);
         await API.addGollectPhoto(ref, resized);
       }
 
@@ -478,7 +478,7 @@
         const c = document.createElement('canvas');
         c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.8));
+        resolve(c.toDataURL('image/jpeg', 0.5));
       };
       img.src = base64;
     });
