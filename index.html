@@ -605,7 +605,7 @@
   }
 
   async function saveArticle() {
-    const ref   = document.getElementById('m-ref').value.trim().toUpperCase();
+    let ref     = document.getElementById('m-ref').value.trim().toUpperCase();
     const nom   = document.getElementById('m-nom').value.trim();
     const zone  = document.getElementById('m-zone').value;
     const unite = document.getElementById('m-unite').value.trim();
@@ -617,9 +617,18 @@
     btn.disabled = true; btn.textContent = '…';
 
     try {
-      const res = await API.addArticle({ ref, nom, zone, unite, stock_actuel: stock, stock_mini: 0 });
+      // Si ref déjà prise, ajouter un numéro
+      let res = await API.addArticle({ ref, nom, zone, unite, stock_actuel: stock, stock_mini: 0 });
+      if (res.error === 'Référence déjà utilisée') {
+        let n = 2;
+        while (res.error === 'Référence déjà utilisée' && n <= 99) {
+          ref = document.getElementById('m-ref').value.trim().toUpperCase().slice(0, 11) + n;
+          res = await API.addArticle({ ref, nom, zone, unite, stock_actuel: stock, stock_mini: 0 });
+          n++;
+        }
+      }
       if (res.error) throw new Error(res.error);
-      showFlash(`"${nom}" créé ✓`, 'success');
+      showFlash(`"${nom}" créé (${ref}) ✓`, 'success');
       closeModal();
     } catch (e) {
       showFlash(e.message || 'Erreur', 'error');
