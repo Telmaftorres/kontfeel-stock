@@ -77,8 +77,9 @@ function addArticle(d) {
 
   sheet.appendRow([
     d.ref, d.nom, d.zone, d.unite || '',
-    parseInt(d.stock_actuel) || 0,
-    parseInt(d.stock_mini)   || 0,
+    parseInt(d.stock_actuel)  || 0,
+    parseInt(d.stock_mini)    || 0,
+    d.conditionnement         || 'aucun',
   ]);
   return { success: true };
 }
@@ -90,7 +91,7 @@ function updateArticle(d) {
   const i     = rows.findIndex((r, idx) => idx > 0 && r[0] === d.ref);
   if (i === -1) return { error: 'Article introuvable' };
 
-  const cols = { nom: 1, zone: 2, unite: 3, stock_actuel: 4, stock_mini: 5 };
+  const cols = { nom: 1, zone: 2, unite: 3, stock_actuel: 4, stock_mini: 5, conditionnement: 6 };
   Object.entries(cols).forEach(([key, col]) => {
     if (d[key] !== undefined) {
       sheet.getRange(i + 1, col + 1).setValue(
@@ -178,18 +179,18 @@ function initSheet() {
   let art = ss.getSheetByName(ART);
   if (!art) art = ss.insertSheet(ART);
   art.clearContents();
-  art.getRange(1, 1, 1, 6).setValues([['ref','nom','zone','unite','stock_actuel','stock_mini']]);
-  art.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#eef2ff');
+  art.getRange(1, 1, 1, 7).setValues([['ref','nom','zone','unite','stock_actuel','stock_mini','conditionnement']]);
+  art.getRange(1, 1, 1, 7).setFontWeight('bold').setBackground('#eef2ff');
 
   // Exemples
   const ex = [
-    ['PALETTE-01',   'Palette Europe 80×120',   'PALETTE',   'palette', 0, 2],
-    ['CHUTE-PVC',    'Chute PVC',               'CHUTE',     'pièce',   0, 0],
-    ['CONSO-SCDA',   'Scotch double face 50mm', 'CONSO',     'rouleau', 0, 3],
-    ['RACK-PCM3000', 'PCM 3000m',               'RACK',      'rouleau', 0, 2],
-    ['MATERIAU-01',  'Échantillon matériautheque','MATERIAU', 'feuille', 0, 0],
+    ['PALETTE-01',   'Palette Europe 80×120',    'PALETTE',  'palette', 0, 2, 'palette'],
+    ['CHUTE-PVC',    'Chute PVC',                'CHUTE',    'pièce',   0, 0, 'aucun'],
+    ['CONSO-SCDA',   'Scotch double face 50mm',  'CONSO',    'rouleau', 0, 3, 'carton'],
+    ['RACK-PCM3000', 'PCM 3000m',                'RACK',     'rouleau', 0, 2, 'aucun'],
+    ['MATERIAU-01',  'Échantillon matériautheque','MATERIAU', 'feuille', 0, 0, 'aucun'],
   ];
-  art.getRange(2, 1, ex.length, 6).setValues(ex);
+  art.getRange(2, 1, ex.length, 7).setValues(ex);
 
   // Onglet Mouvements
   let mov = ss.getSheetByName(MOV);
