@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import require_api_key
 from app.models.article import Article
+from app.models.movement import Movement
 from app.schemas.article import ArticleCreate, ArticleOut, ArticleUpdate
 from app.services.export_service import export_articles_xlsx
 
@@ -105,5 +106,8 @@ async def delete_article(
     article = result.scalar_one_or_none()
     if not article:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article introuvable")
+    mvts = await db.execute(select(Movement).where(Movement.article_ref == ref))
+    for m in mvts.scalars().all():
+        await db.delete(m)
     await db.delete(article)
     await db.commit()

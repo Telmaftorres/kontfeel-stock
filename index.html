@@ -673,7 +673,7 @@
       document.getElementById('p-stock').textContent = res.stock_actuel;
       const msg = type === 'sortie' ? `−${qty} enregistré ✓` : `+${qty} enregistré ✓`;
       showFlash(msg, 'success');
-
+      btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
       setTimeout(() => closePanel(), 900);
     } catch {
       showFlash('Erreur — réessaie', 'error');
