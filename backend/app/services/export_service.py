@@ -46,7 +46,11 @@ def _alternating(r: int) -> str:
     return "EEF2FF" if r % 2 == 0 else "FFFFFF"
 
 
-def export_all_xlsx(articles: list, gollect_items: list) -> bytes:
+MVT_HEADERS = ["Date", "Article", "Nom", "Type", "Quantité", "Stock avant", "Stock après", "Employé", "Étude"]
+MVT_WIDTHS  = [18, 16, 30, 10, 10, 12, 12, 16, 16]
+
+
+def export_all_xlsx(articles: list, gollect_items: list, movements: list | None = None) -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -88,6 +92,31 @@ def export_all_xlsx(articles: list, gollect_items: list) -> bytes:
             cell.fill = fill
 
     ws_g.auto_filter.ref = f"A1:E{len(gollect_items) + 1}"
+
+    # ── Onglet Historique mouvements ──────────────────────────────
+    if movements:
+        ws_m = wb.create_sheet(title="Historique")
+        ws_m.sheet_properties.tabColor = "0F172A"
+        _write_header(ws_m, MVT_HEADERS, MVT_WIDTHS, "0F172A")
+
+        TYPE_COLORS = {"sortie": "FEE2E2", "entree": "DCFCE7"}
+        for r, m in enumerate(movements, 2):
+            row = [
+                m.created_at.strftime("%d/%m/%Y %H:%M") if m.created_at else "",
+                m.article_ref,
+                getattr(m, "article_nom", ""),
+                m.type,
+                float(m.quantite),
+                float(m.stock_avant),
+                float(m.stock_apres),
+                m.employe,
+                m.etude_ref or "",
+            ]
+            fill = PatternFill("solid", fgColor=TYPE_COLORS.get(m.type, _alternating(r)))
+            for c, v in enumerate(row, 1):
+                ws_m.cell(row=r, column=c, value=v).fill = fill
+
+        ws_m.auto_filter.ref = f"A1:I{len(movements) + 1}"
 
     buf = io.BytesIO()
     wb.save(buf)

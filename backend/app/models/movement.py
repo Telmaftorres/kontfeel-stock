@@ -20,4 +20,5 @@ class Movement(Base):
     employe: Mapped[str] = mapped_column(String(100), nullable=False, default="Anonyme")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="stock-app")  # qui a déclenché
+    etude_ref: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

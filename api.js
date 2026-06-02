@@ -92,15 +92,11 @@ const API = {
 
   // ── Mouvements ───────────────────────────────────────────
 
-  async movement(ref, type, qty, employe) {
-    const res = await this._post('/movements', {
-      article_ref: ref,
-      type,
-      quantite: qty,
-      employe,
-      source: 'stock-app',
-    });
-    return { success: true, stock_actuel: Number(res.stock_apres) };
+  async movement(ref, type, qty, employe, etude_ref = null) {
+    const body = { article_ref: ref, type, quantite: qty, employe, source: 'stock-app' };
+    if (etude_ref) body.etude_ref = etude_ref;
+    const res = await this._post('/movements', body);
+    return { success: true, stock_actuel: Number(res.stock_apres), movement_id: res.id };
   },
 
   async getHistory() {

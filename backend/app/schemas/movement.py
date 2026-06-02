@@ -11,6 +11,7 @@ class MovementCreate(BaseModel):
     employe: str = Field("Anonyme", max_length=100)
     notes: str | None = None
     source: str = Field("stock-app", max_length=50)
+    etude_ref: str | None = Field(None, max_length=50)
 
 
 class MovementOut(BaseModel):
@@ -24,6 +25,7 @@ class MovementOut(BaseModel):
     employe: str
     notes: str | None
     source: str
+    etude_ref: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

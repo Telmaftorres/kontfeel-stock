@@ -49,6 +49,7 @@ async def record_movement(
         employe=data.employe,
         notes=data.notes,
         source=data.source,
+        etude_ref=data.etude_ref,
         created_at=datetime.now(timezone.utc),
     )
     db.add(movement)
@@ -69,6 +70,7 @@ async def record_movement(
             "cout": float(movement.cout) if movement.cout else None,
             "employe": movement.employe,
             "source": movement.source,
+            "etude_ref": movement.etude_ref,
             "created_at": movement.created_at.isoformat(),
         },
     }
@@ -81,6 +83,7 @@ async def record_movement(
 async def list_movements(
     article_ref: str | None = Query(None),
     type: str | None = Query(None),
+    etude_ref: str | None = Query(None),
     limit: int = Query(100, le=500),
     db: AsyncSession = Depends(get_db),
     _=Depends(require_api_key),
@@ -90,5 +93,40 @@ async def list_movements(
         stmt = stmt.where(Movement.article_ref == article_ref)
     if type:
         stmt = stmt.where(Movement.type == type)
+    if etude_ref:
+        stmt = stmt.where(Movement.etude_ref == etude_ref)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.patch("/{movement_id}/etude", response_model=MovementOut)
+async def link_etude(
+    movement_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_api_key),
+):
+    result = await db.execute(select(Movement).where(Movement.id == movement_id))
+    movement = result.scalar_one_or_none()
+    if not movement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mouvement introuvable")
+    movement.etude_ref = data.get("etude_ref")
+    await db.commit()
+    await db.refresh(movement)
+    return movement
+
+
+@router.get("/etude/{etude_ref}", response_model=list[MovementOut])
+async def list_movements_by_etude(
+    etude_ref: str,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_api_key),
+):
+    """Endpoint pour le CRM — retourne toutes les sorties liées à une étude."""
+    stmt = (
+        select(Movement)
+        .where(Movement.etude_ref == etude_ref, Movement.type == "sortie")
+        .order_by(Movement.created_at.desc())
+    )
     result = await db.execute(stmt)
     return result.scalars().all()

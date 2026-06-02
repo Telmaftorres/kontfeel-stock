@@ -418,6 +418,20 @@
 
 <div class="flash" id="flash"></div>
 
+<!-- Panneau lier à une étude -->
+<div id="etude-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:24px 20px 40px;width:100%;max-width:480px">
+    <div style="width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px"></div>
+    <p style="font-weight:700;font-size:17px;margin:0 0 4px">Lier à une étude</p>
+    <p style="font-size:13px;color:#64748b;margin:0 0 16px" id="etude-desc"></p>
+    <input id="etude-input" type="text" placeholder="ex : ET2605DZYMG"
+      style="width:100%;height:48px;border:1.5px solid #e2e8f0;border-radius:10px;padding:0 14px;font-size:16px;letter-spacing:.05em;text-transform:uppercase;outline:none;margin-bottom:12px"
+      oninput="this.value=this.value.toUpperCase()" />
+    <button onclick="confirmEtude()" style="display:block;width:100%;background:#4f46e5;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:600;margin-bottom:10px;cursor:pointer">🔗 Confirmer</button>
+    <button onclick="closeEtude()" style="display:block;width:100%;background:none;border:none;color:#94a3b8;font-size:14px;padding:8px;cursor:pointer">Ignorer</button>
+  </div>
+</div>
+
 <!-- Bouton Gollect -->
 <a href="gollect-list.html" style="
   position:fixed; bottom:24px; left:24px;
@@ -660,6 +674,8 @@
     input.value = qty;
   }
 
+  let lastMovementId = null;
+
   async function doAction(type) {
     if (!currentArticle) return;
     const btns = document.querySelectorAll('.btn-action');
@@ -672,14 +688,42 @@
       if (res.error) throw new Error(res.error);
 
       document.getElementById('p-stock').textContent = res.stock_actuel;
+      lastMovementId = res.movement_id || null;
       const msg = type === 'sortie' ? `−${qty} enregistré ✓` : `+${qty} enregistré ✓`;
       showFlash(msg, 'success');
       btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
-      setTimeout(() => closePanel(), 900);
+
+      if (type === 'sortie') {
+        setTimeout(() => {
+          closePanel();
+          document.getElementById('etude-desc').textContent = `${qty} × ${currentArticle?.nom || ''}`;
+          document.getElementById('etude-input').value = '';
+          document.getElementById('etude-panel').style.display = 'flex';
+        }, 900);
+      } else {
+        setTimeout(() => closePanel(), 900);
+      }
     } catch {
       showFlash('Erreur — réessaie', 'error');
       btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     }
+  }
+
+  function closeEtude() {
+    document.getElementById('etude-panel').style.display = 'none';
+    lastMovementId = null;
+  }
+
+  async function confirmEtude() {
+    const ref = document.getElementById('etude-input').value.trim().toUpperCase();
+    if (!ref) { closeEtude(); return; }
+    try {
+      await API._patch(`/movements/${lastMovementId}/etude`, { etude_ref: ref });
+      showFlash(`🔗 Lié à ${ref} ✓`, 'success');
+    } catch {
+      showFlash('Erreur liaison étude', 'error');
+    }
+    closeEtude();
   }
 
   function showFlash(msg, type) {

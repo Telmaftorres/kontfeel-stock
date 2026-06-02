@@ -43,9 +43,11 @@ async def export_all(
     db: AsyncSession = Depends(get_db),
     _=Depends(require_api_key),
 ):
-    articles_result = await db.execute(select(Article).order_by(Article.zone, Article.nom))
-    gollect_result  = await db.execute(select(GollectItem).order_by(GollectItem.nom))
-    data = export_all_xlsx(articles_result.scalars().all(), gollect_result.scalars().all())
+    articles_result  = await db.execute(select(Article).order_by(Article.zone, Article.nom))
+    gollect_result   = await db.execute(select(GollectItem).order_by(GollectItem.nom))
+    from app.models.movement import Movement
+    mvt_result = await db.execute(select(Movement).order_by(Movement.created_at.desc()).limit(500))
+    data = export_all_xlsx(articles_result.scalars().all(), gollect_result.scalars().all(), mvt_result.scalars().all())
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
