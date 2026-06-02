@@ -20,6 +20,16 @@
     </div>
   </nav>
 
+  <!-- Modale suppression -->
+  <div id="del-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center">
+    <div style="background:#fff;border-radius:16px 16px 0 0;padding:24px;width:100%;max-width:480px;text-align:center">
+      <p style="font-weight:700;font-size:17px;margin:0 0 6px" id="del-title">Supprimer cet article ?</p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 24px" id="del-sub"></p>
+      <button id="del-confirm" style="display:block;width:100%;background:#dc2626;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:600;margin-bottom:10px;cursor:pointer">Supprimer</button>
+      <button onclick="closeDel()" style="display:block;width:100%;background:none;border:none;color:#64748b;font-size:15px;padding:10px;cursor:pointer">Annuler</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="search-wrap">
       <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -120,6 +130,53 @@
       try { allArticles = await API.listArticles(); render(filtered()); }
       catch { document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erreur de chargement</div></div>'; }
     }
+
+    // ── Long-press pour supprimer ──────────────────────────────
+    let lpTimer = null;
+    let lpArticle = null;
+
+    function attachLongPress(el, article) {
+      el.addEventListener('touchstart', e => {
+        lpTimer = setTimeout(() => { e.preventDefault(); showDel(article); }, 600);
+      }, { passive: false });
+      el.addEventListener('touchend',  () => clearTimeout(lpTimer));
+      el.addEventListener('touchmove', () => clearTimeout(lpTimer));
+    }
+
+    function showDel(article) {
+      lpArticle = article;
+      document.getElementById('del-sub').textContent = `${article.nom} (${article.ref})`;
+      const modal = document.getElementById('del-modal');
+      modal.style.display = 'flex';
+    }
+
+    function closeDel() {
+      document.getElementById('del-modal').style.display = 'none';
+      lpArticle = null;
+    }
+
+    document.getElementById('del-confirm').addEventListener('click', async () => {
+      if (!lpArticle) return;
+      const ref = lpArticle.ref;
+      closeDel();
+      try {
+        await API.deleteArticle(ref);
+        allArticles = allArticles.filter(a => a.ref !== ref);
+        render(filtered());
+      } catch (e) {
+        alert('Erreur : ' + e.message);
+      }
+    });
+
+    const _origRender = render;
+    render = function(articles) {
+      _origRender(articles);
+      document.querySelectorAll('.article-item, .grid-card').forEach(el => {
+        const ref = el.href && new URL(el.href).searchParams.get('ref');
+        const a = ref && allArticles.find(x => x.ref === ref);
+        if (a) attachLongPress(el, a);
+      });
+    };
 
     document.getElementById('search').addEventListener('input', () => render(filtered()));
 
