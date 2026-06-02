@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
-from sqlalchemy import select
+from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -106,8 +106,6 @@ async def delete_article(
     article = result.scalar_one_or_none()
     if not article:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article introuvable")
-    mvts = await db.execute(select(Movement).where(Movement.article_ref == ref))
-    for m in mvts.scalars().all():
-        await db.delete(m)
+    await db.execute(sql_delete(Movement).where(Movement.article_ref == ref))
     await db.delete(article)
     await db.commit()

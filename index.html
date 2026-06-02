@@ -591,6 +591,7 @@
     currentArticle = article;
     qty = 1;
     document.getElementById('qty-display').value = '1';
+    document.querySelectorAll('.btn-action').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     document.getElementById('p-zone').textContent  = ZONES[article.zone] || article.zone || '';
     document.getElementById('p-name').textContent  = article.nom;
     document.getElementById('p-ref').textContent   = article.ref;
