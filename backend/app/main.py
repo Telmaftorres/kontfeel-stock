@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.routers import admin, articles, gollect, movements, stats
+from app.routers import admin, articles, gollect, matieres_premieres, movements, stats
 
 settings = get_settings()
 
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(articles.router, prefix="/api/v1")
+app.include_router(matieres_premieres.router, prefix="/api/v1")
 app.include_router(movements.router, prefix="/api/v1")
 app.include_router(gollect.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")

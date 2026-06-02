@@ -278,6 +278,24 @@
     .flash.error   { background: #dc2626; color: white; opacity: 1; }
     .flash.hide    { opacity: 0; }
 
+    /* Autocomplete matières */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto;
+      display: none;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover, .autocomplete-item.active { background: #f0f4ff; }
+    .autocomplete-item-nom { font-size: 14px; font-weight: 600; color: #0f172a; }
+    .autocomplete-item-format { font-size: 12px; color: #64748b; }
+
     /* Permission screen */
     #perm-screen {
       position: absolute; inset: 0;
@@ -420,7 +438,14 @@
 
     <div class="form-group">
       <label class="form-label">Nom *</label>
-      <input type="text" class="form-input" id="m-nom" placeholder="ex: PCM 3000m" oninput="autoRef()" />
+      <div class="autocomplete-wrap">
+        <input type="text" class="form-input" id="m-nom" placeholder="ex: PVC 3 mm" oninput="autoRef(); acSearch(this.value)" autocomplete="off" />
+        <div class="autocomplete-list" id="ac-list"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Format</label>
+      <input type="text" class="form-input" id="m-format" placeholder="ex: 1525x2050" />
     </div>
     <div class="form-group">
       <label class="form-label" style="display:flex;justify-content:space-between;">
@@ -669,6 +694,41 @@
   });
 
   // ── Génération auto de référence ──
+  // ── Autocomplete matières premières ──
+  let acTimer = null;
+  async function acSearch(q) {
+    clearTimeout(acTimer);
+    const list = document.getElementById('ac-list');
+    if (q.length < 2) { list.classList.remove('open'); return; }
+    acTimer = setTimeout(async () => {
+      try {
+        const results = await API._get('/matieres-premieres', { q });
+        if (!results.length) { list.classList.remove('open'); return; }
+        list.innerHTML = results.map((r, i) =>
+          `<div class="autocomplete-item" onclick="acSelect('${r.nom.replace(/'/g,"\\'")}','${r.format}','${r.unite}')">
+            <span class="autocomplete-item-nom">${r.nom}</span>
+            <span class="autocomplete-item-format">${r.format} — ${r.unite}</span>
+          </div>`
+        ).join('');
+        list.classList.add('open');
+      } catch(e) {}
+    }, 250);
+  }
+
+  function acSelect(nom, format, unite) {
+    document.getElementById('m-nom').value = nom;
+    document.getElementById('m-format').value = format;
+    document.getElementById('m-unite').value = unite;
+    document.getElementById('ac-list').classList.remove('open');
+    autoRef();
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrap')) {
+      document.getElementById('ac-list')?.classList.remove('open');
+    }
+  });
+
   function autoRef() {
     const nom  = document.getElementById('m-nom').value.trim();
     const zone = document.getElementById('m-zone').value;
@@ -690,7 +750,7 @@
 
   function closeModal() {
     document.getElementById('modal-backdrop').classList.remove('open');
-    ['m-ref','m-nom','m-unite','m-photo'].forEach(id => document.getElementById(id).value = '');
+    ['m-ref','m-nom','m-format','m-unite','m-photo'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('m-cond').value = 'aucun';
     document.getElementById('m-stock').value = '0';
     document.getElementById('m-zone').value = '';
@@ -703,11 +763,12 @@
 
   async function saveArticle() {
     let ref     = document.getElementById('m-ref').value.trim().toUpperCase();
-    const nom   = document.getElementById('m-nom').value.trim();
-    const zone  = document.getElementById('m-zone').value;
-    const unite = document.getElementById('m-unite').value.trim();
-    const cond  = document.getElementById('m-cond').value;
-    const stock = parseInt(document.getElementById('m-stock').value) || 0;
+    const nom    = document.getElementById('m-nom').value.trim();
+    const format = document.getElementById('m-format').value.trim();
+    const zone   = document.getElementById('m-zone').value;
+    const unite  = document.getElementById('m-unite').value.trim();
+    const cond   = document.getElementById('m-cond').value;
+    const stock  = parseInt(document.getElementById('m-stock').value) || 0;
 
     if (!ref || !nom || !zone) { showFlash('Référence, nom et zone requis', 'error'); return; }
 
@@ -716,7 +777,7 @@
 
     try {
       // Si ref déjà prise, ajouter un numéro
-      let res = await API.addArticle({ ref, nom, zone, unite, conditionnement: cond, stock_actuel: stock, stock_mini: 0 });
+      let res = await API.addArticle({ ref, nom, format: format || null, zone, unite, conditionnement: cond, stock_actuel: stock, stock_mini: 0 });
       if (res.error === 'Référence déjà utilisée') {
         let n = 2;
         while (res.error === 'Référence déjà utilisée' && n <= 99) {
