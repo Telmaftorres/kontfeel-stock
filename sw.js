@@ -1,4 +1,4 @@
-const CACHE = 'kstock-v5';
+const CACHE = 'kstock-v6';
 const SHELL = ['/', '/index.html', '/scan.html', '/admin.html', '/articles.html', '/labels.html', '/inventaire.html', '/gollect.html', '/gollect-list.html', '/style.css', '/api.js', '/config.js'];
 
 self.addEventListener('install', e => {
