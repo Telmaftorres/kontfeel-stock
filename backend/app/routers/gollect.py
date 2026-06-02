@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import require_api_key
 from app.models.gollect import GollectItem
 from app.schemas.gollect import GollectCreate, GollectMovement, GollectOut, GollectUpdate
+from app.services.export_service import export_gollect_xlsx
 
 router = APIRouter(prefix="/gollect", tags=["gollect"])
 
@@ -123,3 +125,18 @@ async def add_gollect_photo(
     await db.commit()
     await db.refresh(item)
     return item
+
+
+@router.get("/export/xlsx")
+async def export_gollect(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_api_key),
+):
+    result = await db.execute(select(GollectItem).order_by(GollectItem.nom))
+    items = result.scalars().all()
+    data = export_gollect_xlsx(items)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=stock-gollect.xlsx"},
+    )

@@ -152,6 +152,22 @@ const API = {
 
   // ── Upload photo (ImgBB — inchangé) ──────────────────────
 
+  exportUrl(path) {
+    return `${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`;
+  },
+
+  async downloadXlsx(path, filename) {
+    const res = await fetch(CONFIG.API_URL + path, { headers: this._headers() });
+    if (!res.ok) throw new Error('Erreur export');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
   async uploadPhoto(base64) {
     const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
     const form = new FormData();

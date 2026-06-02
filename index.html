@@ -355,7 +355,7 @@
       <a class="icon-btn" href="articles.html" title="Articles">☰</a>
       <a class="icon-btn" href="inventaire.html" title="Inventaire">📋</a>
       <a class="icon-btn" href="labels.html" title="Étiquettes">🏷</a>
-      <a class="icon-btn" id="sheet-link" href="#" target="_blank" title="Google Sheet">📊</a>
+      <button class="icon-btn" onclick="API.downloadXlsx('/articles/export/xlsx','stock.xlsx')" title="Exporter Excel">📊</button>
     </div>
   </div>
 
@@ -810,10 +810,6 @@
     }
   }
 
-  document.getElementById('sheet-link').addEventListener('click', e => {
-    e.preventDefault();
-    window.open(CONFIG.SHEET_URL, '_blank', 'noopener');
-  });
 
   // Auto-start uniquement si la permission caméra est déjà accordée
   navigator.permissions.query({ name: 'camera' })

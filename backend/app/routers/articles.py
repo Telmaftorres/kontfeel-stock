@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +9,7 @@ from app.core.database import get_db
 from app.core.security import require_api_key
 from app.models.article import Article
 from app.schemas.article import ArticleCreate, ArticleOut, ArticleUpdate
+from app.services.export_service import export_articles_xlsx
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -76,6 +78,21 @@ async def update_article(
     await db.commit()
     await db.refresh(article)
     return article
+
+
+@router.get("/export/xlsx")
+async def export_articles(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_api_key),
+):
+    result = await db.execute(select(Article).order_by(Article.zone, Article.nom))
+    articles = result.scalars().all()
+    data = export_articles_xlsx(articles)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=stock.xlsx"},
+    )
 
 
 @router.delete("/{ref}", status_code=status.HTTP_204_NO_CONTENT)

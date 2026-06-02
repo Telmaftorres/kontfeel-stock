@@ -348,7 +348,7 @@
 <header>
   <a class="icon-btn" href="index.html" title="Stock principal">◀</a>
   <h1>♻️ Gollect</h1>
-  <a class="icon-btn" href="CONFIG_SHEET_URL" id="sheetBtn" title="Google Sheet" target="_blank">📊</a>
+  <button class="icon-btn" id="sheetBtn" title="Exporter Excel">📊</button>
 </header>
 
 <div class="search-wrap">
@@ -512,10 +512,8 @@ const ETAT_L = {
   mauvais_etat:  '⚠️ Mauvais état',
 };
 
-// Lien Google Sheet
-document.getElementById('sheetBtn').addEventListener('click', e => {
-  e.preventDefault();
-  window.open(CONFIG.GOLLECT_SHEET_URL, '_blank', 'noopener');
+document.getElementById('sheetBtn').addEventListener('click', () => {
+  API.downloadXlsx('/gollect/export/xlsx', 'stock-gollect.xlsx');
 });
 
 // ── Flash ──
