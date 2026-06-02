@@ -152,25 +152,8 @@ const API = {
 
   // ── Upload photo (ImgBB — inchangé) ──────────────────────
 
-  async downloadXlsx(path) {
-    const url = `${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`;
-    try {
-      const resp = await fetch(url);
-      const blob = await resp.blob();
-      const file = new File([blob], 'kontfeel-stock.xlsx', { type: blob.type });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'kontfeel-stock.xlsx' });
-      } else {
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = 'kontfeel-stock.xlsx';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      }
-    } catch (e) {
-      window.open(url, '_blank');
-    }
+  downloadXlsx(path) {
+    document.location.href = `${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`;
   },
 
   async uploadPhoto(base64) {
