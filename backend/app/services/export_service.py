@@ -1,21 +1,22 @@
 import io
-from datetime import datetime
+from collections import defaultdict
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-
-def _header_style(cell, bg: str, bold=True):
-    cell.font = Font(bold=bold, color="FFFFFF", size=11)
-    cell.fill = PatternFill("solid", fgColor=bg)
-    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-
-def _row_fill(ws, row: int, cols: int, color: str):
-    fill = PatternFill("solid", fgColor=color)
-    for col in range(1, cols + 1):
-        ws.cell(row=row, column=col).fill = fill
-
+ZONES = {
+    "PALETTE":   "Stockage palette",
+    "CHUTE":     "Chute de matière",
+    "CONSO":     "Consommables",
+    "RACK":      "Racks",
+    "RELIQUAT":  "Reliquat",
+    "BOX-LOG":   "Box logistique",
+    "SHOWROOM":  "Showroom",
+    "BE":        "Zone BE",
+    "MATERIAU":  "Matériauthèque",
+    "FACONNE":   "Façonnage",
+    "LOGISTIQUE":"Logistique",
+}
 
 ETAT_COLORS = {
     "bon_etat":    "DCFCE7",
@@ -24,70 +25,79 @@ ETAT_COLORS = {
     "irreparable": "FEE2E2",
 }
 
+ARTICLE_HEADERS  = ["Référence", "Nom", "Format", "Unité", "Conditionnement", "Stock actuel", "Stock mini"]
+ARTICLE_WIDTHS   = [15, 32, 14, 10, 14, 13, 11]
+GOLLECT_HEADERS  = ["Référence", "Nom", "Description", "État", "Stock actuel"]
+GOLLECT_WIDTHS   = [15, 32, 38, 14, 13]
 
-def export_articles_xlsx(articles: list) -> bytes:
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock"
 
-    headers = ["Référence", "Nom", "Format", "Zone", "Unité", "Conditionnement", "Stock actuel", "Stock mini", "Modifié le"]
-    col_widths = [15, 30, 14, 14, 10, 14, 13, 11, 18]
-
-    for i, (h, w) in enumerate(zip(headers, col_widths), 1):
+def _write_header(ws, headers, widths, bg: str):
+    for i, (h, w) in enumerate(zip(headers, widths), 1):
         cell = ws.cell(row=1, column=i, value=h)
-        _header_style(cell, "4F46E5")
+        cell.font = Font(bold=True, color="FFFFFF", size=11)
+        cell.fill = PatternFill("solid", fgColor=bg)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         ws.column_dimensions[cell.column_letter].width = w
-    ws.row_dimensions[1].height = 28
+    ws.row_dimensions[1].height = 26
     ws.freeze_panes = "A2"
 
-    for r, a in enumerate(articles, 2):
-        fill_color = "F0F4FF" if r % 2 == 0 else "FFFFFF"
-        values = [
-            a.ref, a.nom, a.format or "", a.zone, a.unite,
-            a.conditionnement, float(a.stock_actuel), float(a.stock_mini),
-            a.updated_at.strftime("%d/%m/%Y %H:%M") if a.updated_at else "",
-        ]
-        for c, v in enumerate(values, 1):
-            cell = ws.cell(row=r, column=c, value=v)
-            cell.fill = PatternFill("solid", fgColor=fill_color)
 
-    ws.auto_filter.ref = f"A1:I{len(articles) + 1}"
+def _alternating(r: int) -> str:
+    return "EEF2FF" if r % 2 == 0 else "FFFFFF"
+
+
+def export_all_xlsx(articles: list, gollect_items: list) -> bytes:
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    # ── Un onglet par zone ────────────────────────────────────────
+    by_zone = defaultdict(list)
+    for a in articles:
+        by_zone[a.zone].append(a)
+
+    zone_order = [z for z in ZONES if z in by_zone]
+    other_zones = [z for z in by_zone if z not in ZONES]
+
+    for zone in zone_order + other_zones:
+        label = ZONES.get(zone, zone)[:31]
+        ws = wb.create_sheet(title=label)
+        ws.sheet_properties.tabColor = "4F46E5"
+        _write_header(ws, ARTICLE_HEADERS, ARTICLE_WIDTHS, "4F46E5")
+
+        for r, a in enumerate(by_zone[zone], 2):
+            row = [a.ref, a.nom, a.format or "", a.unite, a.conditionnement,
+                   float(a.stock_actuel), float(a.stock_mini)]
+            fill = PatternFill("solid", fgColor=_alternating(r))
+            for c, v in enumerate(row, 1):
+                cell = ws.cell(row=r, column=c, value=v)
+                cell.fill = fill
+
+        ws.auto_filter.ref = f"A1:G{len(by_zone[zone]) + 1}"
+
+    # ── Onglet Gollect ────────────────────────────────────────────
+    ws_g = wb.create_sheet(title="Gollect")
+    ws_g.sheet_properties.tabColor = "15803D"
+    _write_header(ws_g, GOLLECT_HEADERS, GOLLECT_WIDTHS, "15803D")
+
+    for r, item in enumerate(gollect_items, 2):
+        etat = item.etat or ""
+        row = [item.ref, item.nom, item.description or "", etat, float(item.stock_actuel)]
+        fill = PatternFill("solid", fgColor=ETAT_COLORS.get(etat, _alternating(r)))
+        for c, v in enumerate(row, 1):
+            cell = ws_g.cell(row=r, column=c, value=v)
+            cell.fill = fill
+
+    ws_g.auto_filter.ref = f"A1:E{len(gollect_items) + 1}"
 
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+# Gardés pour compatibilité
+def export_articles_xlsx(articles: list) -> bytes:
+    return export_all_xlsx(articles, [])
 
 
 def export_gollect_xlsx(items: list) -> bytes:
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock Gollect"
-
-    headers = ["Référence", "Nom", "Description", "État", "Stock actuel", "Créé le", "Modifié le"]
-    col_widths = [15, 30, 35, 14, 13, 18, 18]
-
-    for i, (h, w) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=1, column=i, value=h)
-        _header_style(cell, "15803D")
-        ws.column_dimensions[cell.column_letter].width = w
-    ws.row_dimensions[1].height = 28
-    ws.freeze_panes = "A2"
-
-    for r, item in enumerate(items, 2):
-        etat = item.etat or ""
-        fill_color = ETAT_COLORS.get(etat, "FFFFFF")
-        values = [
-            item.ref, item.nom, item.description or "", etat,
-            float(item.stock_actuel),
-            item.created_at.strftime("%d/%m/%Y %H:%M") if item.created_at else "",
-            item.updated_at.strftime("%d/%m/%Y %H:%M") if item.updated_at else "",
-        ]
-        for c, v in enumerate(values, 1):
-            cell = ws.cell(row=r, column=c, value=v)
-            cell.fill = PatternFill("solid", fgColor=fill_color)
-
-    ws.auto_filter.ref = f"A1:G{len(items) + 1}"
-
-    buf = io.BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
+    return export_all_xlsx([], items)

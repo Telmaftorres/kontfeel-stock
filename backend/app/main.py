@@ -1,8 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.database import get_db
+from app.core.security import require_api_key
+from app.models.article import Article
+from app.models.gollect import GollectItem
 from app.routers import admin, articles, gollect, matieres_premieres, movements, stats
+from app.services.export_service import export_all_xlsx
 
 settings = get_settings()
 
@@ -28,6 +36,21 @@ app.include_router(movements.router, prefix="/api/v1")
 app.include_router(gollect.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+
+
+@app.get("/api/v1/export/xlsx")
+async def export_all(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_api_key),
+):
+    articles_result = await db.execute(select(Article).order_by(Article.zone, Article.nom))
+    gollect_result  = await db.execute(select(GollectItem).order_by(GollectItem.nom))
+    data = export_all_xlsx(articles_result.scalars().all(), gollect_result.scalars().all())
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=kontfeel-stock.xlsx"},
+    )
 
 
 @app.get("/health")
