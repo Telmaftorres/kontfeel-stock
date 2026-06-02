@@ -238,7 +238,8 @@
       transition: all 0.1s;
     }
     .qty-btn:active { transform: scale(0.88); background: #f1f5f9; }
-    .qty-val { font-size: 36px; font-weight: 800; min-width: 56px; text-align: center; }
+    .qty-val { font-size: 36px; font-weight: 800; width: 80px; text-align: center; border: none; outline: none; background: transparent; -moz-appearance: textfield; }
+    .qty-val::-webkit-inner-spin-button, .qty-val::-webkit-outer-spin-button { -webkit-appearance: none; }
 
     /* Action buttons */
     .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
@@ -395,7 +396,7 @@
 
     <div class="qty-row">
       <button class="qty-btn" onclick="changeQty(-1)">−</button>
-      <div class="qty-val" id="qty-display">1</div>
+      <input type="number" class="qty-val" id="qty-display" value="1" min="1" inputmode="numeric" />
       <button class="qty-btn" onclick="changeQty(1)">+</button>
     </div>
 
@@ -419,7 +420,7 @@
 
 <!-- Bouton Gollect -->
 <a href="gollect-list.html" style="
-  position:fixed; bottom:104px; right:24px;
+  position:fixed; bottom:24px; left:24px;
   width:60px; height:60px;
   background:#16a34a; color:white; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
@@ -589,7 +590,7 @@
   function showPanel(article) {
     currentArticle = article;
     qty = 1;
-    document.getElementById('qty-display').textContent = '1';
+    document.getElementById('qty-display').value = '1';
     document.getElementById('p-zone').textContent  = ZONES[article.zone] || article.zone || '';
     document.getElementById('p-name').textContent  = article.nom;
     document.getElementById('p-ref').textContent   = article.ref;
@@ -653,8 +654,9 @@
   }
 
   function changeQty(delta) {
-    qty = Math.max(1, qty + delta);
-    document.getElementById('qty-display').textContent = qty;
+    const input = document.getElementById('qty-display');
+    qty = Math.max(1, (parseInt(input.value) || 1) + delta);
+    input.value = qty;
   }
 
   async function doAction(type) {
@@ -664,6 +666,7 @@
 
     try {
       const employe = empInput.value.trim() || 'Anonyme';
+      qty = Math.max(1, parseInt(document.getElementById('qty-display').value) || 1);
       const res = await API.movement(currentArticle.ref, type, qty, employe);
       if (res.error) throw new Error(res.error);
 
