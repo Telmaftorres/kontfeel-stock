@@ -153,7 +153,7 @@ const API = {
   // ── Upload photo (ImgBB — inchangé) ──────────────────────
 
   downloadXlsx(path) {
-    window.open(`${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`, '_blank');
+    document.location.href = `${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`;
   },
 
   async uploadPhoto(base64) {
