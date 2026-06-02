@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 from app.core.database import Base
-from app.models import api_key, article, movement, webhook  # noqa: F401
+from app.models import api_key, article, gollect, movement, webhook  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
