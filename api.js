@@ -153,7 +153,22 @@ const API = {
   // ── Upload photo (ImgBB — inchangé) ──────────────────────
 
   downloadXlsx(path) {
-    window.open(`${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`, '_blank');
+    const url = `${CONFIG.API_URL}${path}?api_key=${CONFIG.API_KEY}`;
+    if (window.navigator.standalone) {
+      // iOS PWA : afficher un panneau pour éviter de quitter l'appli
+      const existing = document.getElementById('_dl-overlay');
+      if (existing) existing.remove();
+      const el = document.createElement('div');
+      el.id = '_dl-overlay';
+      el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:24px;box-shadow:0 -4px 24px rgba(0,0,0,.15);z-index:9999;text-align:center';
+      el.innerHTML = `<p style="font-weight:700;font-size:16px;margin:0 0 8px">Télécharger le fichier</p>
+        <p style="font-size:13px;color:#64748b;margin:0 0 20px">Appuie sur le lien ci-dessous puis choisis "Ouvrir avec Sheets"</p>
+        <a href="${url}" style="display:block;background:#4f46e5;color:#fff;padding:14px;border-radius:10px;font-weight:600;text-decoration:none;margin-bottom:12px">📥 Télécharger kontfeel-stock.xlsx</a>
+        <button onclick="document.getElementById('_dl-overlay').remove()" style="background:none;border:none;color:#64748b;font-size:14px;padding:8px;cursor:pointer">Annuler</button>`;
+      document.body.appendChild(el);
+    } else {
+      window.open(url, '_blank');
+    }
   },
 
   async uploadPhoto(base64) {
