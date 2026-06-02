@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.api_key import ApiKey
 
+from fastapi import Query
+
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
@@ -24,8 +26,10 @@ def generate_key() -> tuple[str, str]:
 
 async def require_api_key(
     key: str | None = Security(api_key_header),
+    api_key: str | None = Query(None, alias="api_key"),
     db: AsyncSession = Depends(get_db),
 ) -> ApiKey:
+    key = key or api_key
     if not key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Clé API manquante")
 
