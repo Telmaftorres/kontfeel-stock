@@ -810,7 +810,10 @@
     }
   }
 
-  document.getElementById('sheet-link').href = CONFIG.SHEET_URL;
+  document.getElementById('sheet-link').addEventListener('click', e => {
+    e.preventDefault();
+    window.open(CONFIG.SHEET_URL, '_blank', 'noopener');
+  });
 
   // Auto-start uniquement si la permission caméra est déjà accordée
   navigator.permissions.query({ name: 'camera' })

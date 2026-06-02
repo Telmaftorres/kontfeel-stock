@@ -513,7 +513,10 @@ const ETAT_L = {
 };
 
 // Lien Google Sheet
-document.getElementById('sheetBtn').href = CONFIG.GOLLECT_SHEET_URL;
+document.getElementById('sheetBtn').addEventListener('click', e => {
+  e.preventDefault();
+  window.open(CONFIG.GOLLECT_SHEET_URL, '_blank', 'noopener');
+});
 
 // ── Flash ──
 let flashT;
