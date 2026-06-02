@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import subprocess
+import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 SECRET = os.environ.get("DEPLOY_SECRET", "")
@@ -61,10 +62,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        ok = deploy()
-        self.send_response(200 if ok else 500)
+        threading.Thread(target=deploy, daemon=True).start()
+        self.send_response(202)
         self.end_headers()
-        self.wfile.write(b"ok" if ok else b"deploy failed")
+        self.wfile.write(b"deploy started")
 
     def log_message(self, *args):
         pass
