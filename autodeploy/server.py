@@ -27,7 +27,7 @@ def verify_signature(body: bytes, sig_header: str) -> bool:
 def deploy():
     LOG.info("Déploiement démarré…")
     result = subprocess.run(
-        ["bash", "-c", f"cd {REPO} && git pull && docker compose up -d --build"],
+        ["bash", "-c", f"cd {REPO} && git pull && docker compose up -d --build --force-recreate"],
         capture_output=True, text=True
     )
     LOG.info(result.stdout)
