@@ -424,9 +424,12 @@
     <div style="width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px"></div>
     <p style="font-weight:700;font-size:17px;margin:0 0 4px">Lier à une étude</p>
     <p style="font-size:13px;color:#64748b;margin:0 0 16px" id="etude-desc"></p>
-    <input id="etude-input" type="text" placeholder="ex : ET2605DZYMG"
-      style="width:100%;height:48px;border:1.5px solid #e2e8f0;border-radius:10px;padding:0 14px;font-size:16px;letter-spacing:.05em;text-transform:uppercase;outline:none;margin-bottom:12px"
-      oninput="this.value=this.value.toUpperCase()" />
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="etude-input" type="text" placeholder="ex : ET2605DZYMG"
+        style="flex:1;height:48px;border:1.5px solid #e2e8f0;border-radius:10px;padding:0 14px;font-size:16px;letter-spacing:.05em;text-transform:uppercase;outline:none"
+        oninput="this.value=this.value.toUpperCase()" />
+      <button onclick="scanEtude()" style="width:48px;height:48px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:10px;font-size:20px;cursor:pointer">📷</button>
+    </div>
     <button onclick="confirmEtude()" style="display:block;width:100%;background:#4f46e5;color:#fff;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:600;margin-bottom:10px;cursor:pointer">🔗 Confirmer</button>
     <button onclick="closeEtude()" style="display:block;width:100%;background:none;border:none;color:#94a3b8;font-size:14px;padding:8px;cursor:pointer">Ignorer</button>
   </div>
@@ -574,6 +577,18 @@
   }
 
   async function onQRDetected(data) {
+    // Mode scan étude — le QR contient le numéro d'étude
+    if (scanningEtude) {
+      scanningEtude = false;
+      scanning = false;
+      scanCooldown = true;
+      if (navigator.vibrate) navigator.vibrate(80);
+      const etudeRef = data.trim().toUpperCase();
+      document.getElementById('etude-input').value = etudeRef;
+      document.getElementById('etude-panel').style.display = 'flex';
+      return;
+    }
+
     // Extract ref from URL or use raw value
     let ref;
     try {
@@ -675,6 +690,7 @@
   }
 
   let lastMovementId = null;
+  let scanningEtude = false;
 
   async function doAction(type) {
     if (!currentArticle) return;
@@ -694,9 +710,10 @@
       btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
 
       if (type === 'sortie') {
+        const articleNom = currentArticle.nom;
         setTimeout(() => {
           closePanel();
-          document.getElementById('etude-desc').textContent = `${qty} × ${currentArticle?.nom || ''}`;
+          document.getElementById('etude-desc').textContent = `${qty} × ${articleNom}`;
           document.getElementById('etude-input').value = '';
           document.getElementById('etude-panel').style.display = 'flex';
         }, 900);
@@ -712,6 +729,15 @@
   function closeEtude() {
     document.getElementById('etude-panel').style.display = 'none';
     lastMovementId = null;
+    scanningEtude = false;
+  }
+
+  function scanEtude() {
+    document.getElementById('etude-panel').style.display = 'none';
+    scanningEtude = true;
+    scanning = true;
+    scanCooldown = false;
+    showFlash('📷 Scanne le QR de l\'étude…', 'success');
   }
 
   async function confirmEtude() {
